@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
 import { SelfQRcodeWrapper, SelfAppBuilder } from "@selfxyz/qrcode";
 import {
   ACTION,
@@ -20,6 +21,8 @@ export type SafePassportWidgetProps = {
   accessCode?: `0x${string}`; // optional
   minimumAge?: number; // for client mode (default 18)
   excludedCountries?: string[]; // for pm mode
+  onSuccess?: () => void | Promise<void>;
+  onError?: (error?: unknown) => void | Promise<void>;
 };
 
 export function SafePassportWidget(props: SafePassportWidgetProps) {
@@ -34,6 +37,8 @@ export function SafePassportWidget(props: SafePassportWidgetProps) {
   } = props;
 
   const [error, setError] = useState<string | null>(null);
+  const [info, setInfo] = useState<string | null>(null);
+  const router = useRouter();
 
   const disclosures = useMemo(() => {
     if (mode === "client") return getClientDisclosures({ minimumAge, requireNationality: true });
@@ -65,6 +70,28 @@ export function SafePassportWidget(props: SafePassportWidgetProps) {
     if (!error) setError(e?.message || "Failed to build Self app configuration.");
   }
 
+  async function handleSuccess() {
+    try {
+      setInfo("Finalizing onboarding…");
+      const res = await fetch("/api/investor/kyc/complete", { method: "POST" });
+      if (!res.ok) throw new Error("Failed to complete onboarding");
+      setInfo("Onboarding complete.");
+      // Invoke optional external callback
+      if (props.onSuccess) await props.onSuccess();
+      // Navigate to investor home by default
+      router.replace("/investor");
+    } catch (e: any) {
+      setInfo(null);
+      setError(e?.message || "Onboarding failed. You are not onboarded.");
+      if (props.onError) await props.onError(e);
+    }
+  }
+
+  async function handleError(e?: unknown) {
+    setError("Verification failed. You are not onboarded.");
+    if (props.onError) await props.onError(e);
+  }
+
   return (
     <div className="space-y-3">
       <div className="text-sm text-muted-foreground">
@@ -73,7 +100,10 @@ export function SafePassportWidget(props: SafePassportWidgetProps) {
       {error ? (
         <div className="rounded-md border p-3 text-sm text-red-600">{error}</div>
       ) : selfApp ? (
-        <SelfQRcodeWrapper selfApp={selfApp} size={256} />
+        <>
+          {info && <div className="rounded-md border p-3 text-sm text-emerald-600">{info}</div>}
+          <SelfQRcodeWrapper selfApp={selfApp} size={256} onSuccess={handleSuccess} onError={handleError} />
+        </>
       ) : (
         <div className="rounded-md border p-3 text-sm text-muted-foreground">Preparing QR…</div>
       )}

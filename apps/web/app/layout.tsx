@@ -5,7 +5,7 @@ import { Navbar } from "@/components/site/navbar";
 import { Footer } from "@/components/site/footer";
 import type { ReactNode } from "react";
 import { ClerkProvider } from "@clerk/nextjs";
-import { AppPrivyProvider } from "@/components/providers/privy-provider";
+//import { AppPrivyProvider } from "@/components/providers/privy-provider";
 
 export const metadata: Metadata = {
   title: "DeFi Smallcases",
@@ -19,7 +19,7 @@ export default function RootLayout({
     <html lang="en" suppressHydrationWarning>
       <body className="min-h-screen bg-background text-foreground antialiased">
         <ClerkProvider>
-          <AppPrivyProvider>
+          {/* <AppPrivyProvider> */}
             <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
               <div className="flex min-h-screen flex-col">
                 <Navbar />
@@ -27,7 +27,7 @@ export default function RootLayout({
                 <Footer />
               </div>
             </ThemeProvider>
-          </AppPrivyProvider>
+          {/* </AppPrivyProvider> */}
         </ClerkProvider>
       </body>
     </html>
