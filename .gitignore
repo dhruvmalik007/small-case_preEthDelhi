@@ -6,8 +6,9 @@ node_modules
 dist
 dist-ssr
 *.local
-.env
+**/.env
 .cache
 server/dist
 public/dist
 storybook-static/
+**/out

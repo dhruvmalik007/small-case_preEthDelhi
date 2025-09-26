@@ -1,0 +1,12 @@
+[profile.default]
+solc_version = "0.8.28"
+src = "contracts/src"
+out = "contracts/out"
+libs = ["lib", "node_modules"]
+remappings = [
+    "forge-std/=lib/forge-std/src/",
+    "@selfxyz/contracts/=node_modules/@selfxyz/contracts/"
+]
+
+[fmt]
+line_length = 100
