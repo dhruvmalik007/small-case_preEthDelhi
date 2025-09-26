@@ -1,8 +1,8 @@
 import { createPublicClient, createWalletClient, http, parseAbi, toHex, zeroAddress } from 'viem';
+import { foundry } from 'viem/chains';
 import { privateKeyToAccount } from 'viem/accounts';
 import { readFileSync } from 'fs';
 import path from 'path';
-import { celoAlfajores } from 'viem/chains';
 
 const RPC_URL = process.env.RPC_URL || 'http://127.0.0.1:8545';
 const PRIVATE_KEY = (process.env.PRIVATE_KEY || '').startsWith('0x')
@@ -15,8 +15,8 @@ async function main() {
   }
 
   const account = privateKeyToAccount(PRIVATE_KEY);
-  const publicClient = createPublicClient({ transport: http(RPC_URL) });
-  const wallet = createWalletClient({ account, transport: http(RPC_URL) });
+  const publicClient = createPublicClient({ chain: foundry, transport: http(RPC_URL) });
+  const wallet = createWalletClient({ account, chain: foundry, transport: http(RPC_URL) });
 
   // Read artifacts from Foundry build output
   const outDir = path.resolve(__dirname, '../contracts/out');
@@ -32,6 +32,7 @@ async function main() {
     abi: hubJson.abi,
     bytecode: hubJson.bytecode.object as `0x${string}`,
     args: [],
+    chain: foundry,
   });
   const hubReceipt = await publicClient.waitForTransactionReceipt({ hash: hubHash });
   const hubAddress = hubReceipt.contractAddress!;
@@ -45,6 +46,7 @@ async function main() {
     abi: safeJson.abi,
     bytecode: safeJson.bytecode.object as `0x${string}`,
     args: [hubAddress, scope, clientCfg, pmCfg],
+    chain: foundry,
   });
   const safeReceipt = await publicClient.waitForTransactionReceipt({ hash: safeHash });
   const safeAddress = safeReceipt.contractAddress!;
@@ -61,7 +63,7 @@ async function main() {
     issuingState: 'DEU',
     name: nameArr,
     idNumber: 'X1234567',
-    nationality: 'DEU',
+    nationality: 'IND',
     dateOfBirth: '01-01-90',
     gender: 'F',
     expiryDate: '01-01-30',
@@ -80,7 +82,7 @@ async function main() {
     abi: hubJson.abi,
     functionName: 'submitVerification',
     args: [safeAddress, output, userData],
-    chain: celoAlfajores
+    chain: foundry,
   });
   await publicClient.waitForTransactionReceipt({ hash: submitHash });
   console.log('Submitted verification via mock hub');
@@ -93,6 +95,32 @@ async function main() {
     args: [account.address],
   });
   console.log('clientVerified?', clientVerified);
+
+  // PM flow (action = 2)
+  const pmOutput = {
+    ...output,
+    nationality: 'IND' as const,
+    olderThan: 18n,
+  };
+  const pmAction = 2;
+  const pmUserData = (('0x' + pmAction.toString(16).padStart(2, '0') + accessCode.slice(2)) as `0x${string}`);
+  const pmSubmitHash = await wallet.writeContract({
+    address: hubAddress as `0x${string}`,
+    abi: hubJson.abi,
+    functionName: 'submitVerification',
+    args: [safeAddress, pmOutput, pmUserData],
+    chain: foundry,
+  });
+  await publicClient.waitForTransactionReceipt({ hash: pmSubmitHash });
+  console.log('Submitted PM verification via mock hub');
+
+  const pmVerified = await publicClient.readContract({
+    address: safeAddress as `0x${string}`,
+    abi: safeJson.abi,
+    functionName: 'pmVerified',
+    args: [account.address],
+  });
+  console.log('pmVerified?', pmVerified);
 }
 
 main().catch((e) => {

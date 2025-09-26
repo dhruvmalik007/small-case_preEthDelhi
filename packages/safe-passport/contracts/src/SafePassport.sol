@@ -44,8 +44,14 @@ contract SafePassport is SelfVerificationRoot {
     event ClientVerified(address indexed user, string nationality);
     event PMVerified(address indexed user, string nationality);
     event ConfigIdsUpdated(bytes32 clientConfigId, bytes32 pmConfigId);
-    event ScopeUpdated(uint256 scope);
     event RIARegistryUpdated(address indexed registry);
+    event RulesUpdated(uint256 minAgeRequired, string requiredNationality, bool enforceAge, bool enforceNationality);
+
+    // --- Rule Configuration (enforced on-chain in addition to Self config) ---
+    uint256 public minAgeRequired = 18; // default 18
+    string public requiredNationality = "IND"; // default Indian
+    bool public enforceAge = true;
+    bool public enforceNationality = true;
 
     constructor(
         address identityVerificationHubV2,
@@ -82,6 +88,20 @@ contract SafePassport is SelfVerificationRoot {
         emit RIARegistryUpdated(registry);
     }
 
+    /// @notice Set verification rules (min age, nationality) for additional on-chain checks
+    function setRules(
+        uint256 _minAgeRequired,
+        string calldata _requiredNationality,
+        bool _enforceAge,
+        bool _enforceNationality
+    ) external onlyOwner {
+        minAgeRequired = _minAgeRequired;
+        requiredNationality = _requiredNationality;
+        enforceAge = _enforceAge;
+        enforceNationality = _enforceNationality;
+        emit RulesUpdated(_minAgeRequired, _requiredNationality, _enforceAge, _enforceNationality);
+    }
+
     // --- Dynamic Config Routing ---
     /// @inheritdoc SelfVerificationRoot
     function getConfigId(
@@ -114,6 +134,17 @@ contract SafePassport is SelfVerificationRoot {
         string memory nationalityStr = _tryGetNationality(_output);
         if (bytes(nationalityStr).length > 0) {
             lastNationality[user] = nationalityStr;
+        }
+
+        // Additional on-chain enforcement according to configured rules
+        if (enforceNationality) {
+            require(
+                keccak256(abi.encodePacked(nationalityStr)) == keccak256(abi.encodePacked(requiredNationality)),
+                "bad nationality"
+            );
+        }
+        if (enforceAge) {
+            require(_output.olderThan >= minAgeRequired, "age too low");
         }
 
         if (actionCode == 1) {
