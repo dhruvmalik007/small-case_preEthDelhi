@@ -4,6 +4,7 @@ const nextConfig = {
   experimental: {
     optimizeCss: true,
   },
+  transpilePackages: ["@smallcase_defi/safe-passport"],
 };
 
 module.exports = nextConfig;

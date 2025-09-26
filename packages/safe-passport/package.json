@@ -8,6 +8,7 @@
   "scripts": {
     "build": "tsup",
     "dev": "tsup --watch",
+    "prepare": "pnpm run build",
     "lint": "eslint . --max-warnings 0",
     "clean": "rm -rf .turbo node_modules dist",
     "forge:build": "forge build -C contracts",

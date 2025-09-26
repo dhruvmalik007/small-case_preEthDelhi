@@ -1,21 +1,67 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import { SafePassportWidget } from "@/components/self/SafePassportWidget";
 
 export default function InvestorSelfVerifyPage() {
-  const [address, setAddress] = useState<`0x${string}` | "">("");
+  const [address, setAddress] = useState<`0x${string}` | null>(null);
+  const [chainId, setChainId] = useState<string | null>(null);
+  const [hasProvider, setHasProvider] = useState<boolean>(false);
+  const [loading, setLoading] = useState<boolean>(true);
 
+  // Silent detection and event wiring
   useEffect(() => {
-    async function detect() {
-      if (typeof window !== "undefined" && (window as any).ethereum) {
-        try {
-          const accounts: string[] = await (window as any).ethereum.request({ method: "eth_requestAccounts" });
-          if (accounts?.[0]) setAddress(accounts[0] as `0x${string}`);
-        } catch {}
-      }
+    const eth = (typeof window !== "undefined" ? (window as any).ethereum : undefined);
+    if (!eth) {
+      setHasProvider(false);
+      setLoading(false);
+      return;
     }
-    detect();
+    setHasProvider(true);
+
+    let mounted = true;
+    (async () => {
+      try {
+        const [accounts, cid] = await Promise.all([
+          eth.request({ method: "eth_accounts" }),
+          eth.request({ method: "eth_chainId" }).catch(() => null),
+        ]);
+        if (!mounted) return;
+        setAddress(accounts?.[0] ?? null);
+        if (cid) setChainId(cid);
+      } finally {
+        if (mounted) setLoading(false);
+      }
+    })();
+
+    const onAccountsChanged = (accts: string[]) => {
+      setAddress(accts?.[0] ?? null);
+    };
+    const onChainChanged = (cid: string) => {
+      setChainId(cid);
+    };
+
+    eth.on?.("accountsChanged", onAccountsChanged);
+    eth.on?.("chainChanged", onChainChanged);
+
+    return () => {
+      mounted = false;
+      eth.removeListener?.("accountsChanged", onAccountsChanged);
+      eth.removeListener?.("chainChanged", onChainChanged);
+    };
+  }, []);
+
+  const connect = useCallback(async () => {
+    const eth = (typeof window !== "undefined" ? (window as any).ethereum : undefined);
+    if (!eth) return;
+    try {
+      const accounts: string[] = await eth.request({ method: "eth_requestAccounts" });
+      setAddress(accounts?.[0] ?? null);
+      const cid: string = await eth.request({ method: "eth_chainId" });
+      setChainId(cid ?? null);
+    } catch (e) {
+      // user rejected or error
+    }
   }, []);
 
   return (
@@ -25,20 +71,28 @@ export default function InvestorSelfVerifyPage() {
         <p className="mt-1 text-sm text-muted-foreground">Prove you are 18+ and not OFAC-sanctioned using your e-passport.</p>
       </div>
 
-      <div className="space-y-2">
-        <label className="block text-sm font-medium">Your Wallet Address</label>
-        <input
-          value={address}
-          onChange={(e) => setAddress(e.target.value as `0x${string}`)}
-          placeholder="0x..."
-          className="w-full rounded-md border bg-background px-3 py-2"
-        />
-      </div>
+      {!hasProvider && (
+        <div className="rounded-md border p-3 text-sm text-red-600">No injected wallet detected. Install MetaMask or a compatible wallet.</div>
+      )}
 
-      {address ? (
-        <SafePassportWidget mode="client" userAddress={address} />
-      ) : (
-        <p className="text-sm text-muted-foreground">Connect your wallet or paste your address to continue.</p>
+      {hasProvider && !address && (
+        <button
+          type="button"
+          onClick={connect}
+          className="inline-flex h-10 items-center justify-center rounded-md border bg-primary px-4 text-sm font-medium text-primary-foreground transition-colors hover:opacity-90"
+          disabled={loading}
+        >
+          {loading ? "Checking wallet…" : "Connect Wallet"}
+        </button>
+      )}
+
+      {address && (
+        <div className="space-y-3">
+          <div className="text-sm text-muted-foreground">
+            Connected {address.slice(0, 6)}…{address.slice(-4)} {chainId ? `(chain ${parseInt(chainId, 16)})` : ""}
+          </div>
+          <SafePassportWidget mode="client" userAddress={address} />
+        </div>
       )}
     </section>
   );

@@ -49,7 +49,7 @@ contract SafePassport is SelfVerificationRoot {
 
     // --- Rule Configuration (enforced on-chain in addition to Self config) ---
     uint256 public minAgeRequired = 18; // default 18
-    string public requiredNationality = "IND"; // default Indian
+    string public requiredNationality = "IN"; // default Indian
     bool public enforceAge = true;
     bool public enforceNationality = true;
 
