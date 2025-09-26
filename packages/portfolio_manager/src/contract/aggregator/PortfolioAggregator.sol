@@ -55,8 +55,7 @@ contract PortfolioAggregator is ERC4626, Ownable, ReentrancyGuard {
     /// @notice allocate underlying assets from the Aggregator into a child ERC-4626 vault
     function allocateToChild(address childVault, uint256 assets) external onlyManager nonReentrant {
         require(assets > 0, "zero assets");
-        IERC20(asset()).safeApprove(childVault, 0);
-        IERC20(asset()).safeApprove(childVault, assets);
+        IERC20(asset()).forceApprove(childVault, assets);
         uint256 shares = ERC4626(childVault).deposit(assets, address(this));
         (shares); // silence warning; child shares retained by aggregator
         childDeposits[childVault] += assets;
