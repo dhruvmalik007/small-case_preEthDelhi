@@ -44,7 +44,7 @@ contract SafePassport is SelfVerificationRoot {
     event ClientVerified(address indexed user, string nationality);
     event PMVerified(address indexed user, string nationality);
     event ConfigIdsUpdated(bytes32 clientConfigId, bytes32 pmConfigId);
-    event ScopeUpdatedUser(uint256 scope);
+    event ScopeUpdated(uint256 scope);
     event RIARegistryUpdated(address indexed registry);
 
     constructor(
@@ -73,7 +73,7 @@ contract SafePassport is SelfVerificationRoot {
     // Expose scope setter from base for lifecycle management
     function setScope(uint256 newScope) external onlyOwner {
         _setScope(newScope);
-        emit ScopeUpdatedUser(newScope);
+        emit ScopeUpdated(newScope);
     }
 
     /// @notice Configure the external RIA certification registry used in PM flow

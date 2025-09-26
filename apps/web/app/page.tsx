@@ -1,24 +1,26 @@
 import { Hero } from "@/components/sections/hero";
-import { StrategyCard } from "@/components/strategy/StrategyCard";
-import { strategies } from "@/data/strategies";
 import { PricingSection } from "@/components/sections/pricing";
+import Link from "next/link";
 
 export default function HomePage() {
-  const featured = strategies.slice(0, 8);
   return (
     <div>
       <Hero />
       <section id="featured" className="container py-12 md:py-16">
         <div className="mb-6 flex items-end justify-between">
           <div>
-            <h2 className="text-2xl font-semibold">Featured Strategies</h2>
-            <p className="text-sm text-muted-foreground">Handpicked baskets curated for diverse risk profiles.</p>
+            <h2 className="text-2xl font-semibold">Invest in Curated Strategies</h2>
+            <p className="text-sm text-muted-foreground">Browse and invest from the investor Portal.</p>
           </div>
         </div>
-        <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-          {featured.map((s) => (
-            <StrategyCard key={s.slug} strategy={s} />
-          ))}
+        <div className="rounded-lg border bg-card p-6 text-sm">
+          <p>
+            Strategy listings and investing are now available under the investor Portal. Head over to
+            {" "}
+            <Link href="/investor/strategies" className="font-medium underline">/investor/strategies</Link>
+            {" "}
+            to explore and subscribe.
+          </p>
         </div>
       </section>
       <PricingSection />

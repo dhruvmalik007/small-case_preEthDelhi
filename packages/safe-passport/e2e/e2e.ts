@@ -2,6 +2,7 @@ import { createPublicClient, createWalletClient, http, parseAbi, toHex, zeroAddr
 import { privateKeyToAccount } from 'viem/accounts';
 import { readFileSync } from 'fs';
 import path from 'path';
+import { celoAlfajores } from 'viem/chains';
 
 const RPC_URL = process.env.RPC_URL || 'http://127.0.0.1:8545';
 const PRIVATE_KEY = (process.env.PRIVATE_KEY || '').startsWith('0x')
@@ -79,6 +80,7 @@ async function main() {
     abi: hubJson.abi,
     functionName: 'submitVerification',
     args: [safeAddress, output, userData],
+    chain: celoAlfajores
   });
   await publicClient.waitForTransactionReceipt({ hash: submitHash });
   console.log('Submitted verification via mock hub');

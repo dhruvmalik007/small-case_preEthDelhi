@@ -80,9 +80,20 @@ contract DeployAndSimulate is Script {
 
             console.log("Simulation complete");
         } else {
-            // Mainnet/production deployment
-            // Default Celo mainnet Self IdentityVerificationHub V2 (per docs)
-            address hub = 0xe57F4773bd9c9d8b6Cd70431117d353298B9f5BF; // CELO mainnet
+            // On-chain deployment
+            // Select hub by NETWORK env ("celo" | "celo_testnet"), default: celo_testnet (mock passports)
+            string memory network = "celo_testnet";
+            try vm.envString("NETWORK") returns (string memory n) { network = n; } catch {}
+
+            // Default hubs per docs: https://docs.self.xyz/contract-integration/deployed-contracts
+            address hub;
+            if (keccak256(bytes(network)) == keccak256(bytes("celo"))) {
+                hub = 0xe57F4773bd9c9d8b6Cd70431117d353298B9f5BF; // CELO mainnet — real passports
+            } else {
+                // CELO testnet (Sepolia/Alfajores) — mock passports
+                hub = 0x16ECBA51e18a4a7e61fdC417f0d47AFEeDfbed74;
+            }
+            // Allow explicit override
             try vm.envAddress("SELF_HUB") returns (address h) { hub = h; } catch {}
 
             // Config IDs and scope can be provided via env; default to zero
@@ -102,8 +113,9 @@ contract DeployAndSimulate is Script {
                 }
             } catch {}
 
-            console.log("Mainnet deployment complete:");
+            console.log("Deployment complete:");
             console.log("deployer", deployer);
+            console.log("network", bytes(network).length == 4 ? string(abi.encodePacked(network)) : network);
             console.log("hub", hub);
             console.log("safe", address(safe));
             console.log("scope", scope);
@@ -114,7 +126,12 @@ contract DeployAndSimulate is Script {
 
             console.log("Set these in your web app env:");
             console.log("NEXT_PUBLIC_SAFE_PASSPORT_ADDRESS=%s", toHexString(address(safe)));
-            console.log("NEXT_PUBLIC_SELF_ENDPOINT_TYPE=celo");
+            // For Self QR builder, use 'staging_celo' for testnet and 'celo' for mainnet
+            if (keccak256(bytes(network)) == keccak256(bytes("celo"))) {
+                console.log("NEXT_PUBLIC_SELF_ENDPOINT_TYPE=celo");
+            } else {
+                console.log("NEXT_PUBLIC_SELF_ENDPOINT_TYPE=staging_celo");
+            }
         }
 
         vm.stopBroadcast();
