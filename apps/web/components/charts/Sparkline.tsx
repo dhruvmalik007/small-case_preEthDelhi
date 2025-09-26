@@ -16,7 +16,7 @@ function toCumulativeIndex(returnsPct: number[]) {
 export function Sparkline({
   returnsPct,
   className,
-  stroke = "#16a34a",
+  stroke = "hsl(var(--primary))",
 }: {
   returnsPct: number[];
   className?: string;
@@ -42,7 +42,7 @@ export function Sparkline({
   return (
     <svg viewBox={`0 0 ${width} ${height}`} className={cn("h-9 w-[120px]", className)}>
       <path d={d} fill="none" stroke={stroke} strokeWidth={2} />
-      <circle cx={scaleX(data.length - 1)} cy={scaleY(data[data.length - 1])} r={2.5} fill={positive ? "#16a34a" : "#ef4444"} />
+      <circle cx={scaleX(data.length - 1)} cy={scaleY(data[data.length - 1])} r={2.5} fill={positive ? "hsl(var(--primary))" : "hsl(var(--destructive))"} />
     </svg>
   );
 }
