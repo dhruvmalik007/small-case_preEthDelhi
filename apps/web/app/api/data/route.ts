@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 
-const CMC_API_KEY = "a19724b4-9bd7-48bd-b496-aab8a0f0447c";
+const CMC_API_KEY = process.env.NEXT_PUBLIC_CMC_API_KEY;
 const CMC_BASE_URL = "https://pro-api.coinmarketcap.com/v1";
 
 // CoinMarketCap API helper functions
@@ -58,6 +58,10 @@ export async function GET(req: Request) {
     
     if (!token) {
       return NextResponse.json({ error: "No token provided" }, { status: 400 });
+    }
+
+    if (!CMC_API_KEY) {
+      return NextResponse.json({ error: "CoinMarketCap API key not configured" }, { status: 500 });
     }
 
     // Extract symbol from token (e.g., "BTC/USDT" -> "BTC")
