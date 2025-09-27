@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useCallback, useEffect, useState } from "react";
+import { useSignIn } from "@clerk/nextjs";
 import { SafePassportWidget } from "@/components/self/SafePassportWidget";
 
 export default function InvestorSelfVerifyPage() {
@@ -8,6 +9,7 @@ export default function InvestorSelfVerifyPage() {
   const [chainId, setChainId] = useState<string | null>(null);
   const [hasProvider, setHasProvider] = useState<boolean>(false);
   const [loading, setLoading] = useState<boolean>(true);
+  const { signIn, isLoaded: signInLoaded } = useSignIn();
 
   // Silent detection and event wiring
   useEffect(() => {
@@ -53,16 +55,26 @@ export default function InvestorSelfVerifyPage() {
 
   const connect = useCallback(async () => {
     const eth = (typeof window !== "undefined" ? (window as any).ethereum : undefined);
-    if (!eth) return;
+    if (!eth || !signInLoaded || !signIn) return;
     try {
-      const accounts: string[] = await eth.request({ method: "eth_requestAccounts" });
-      setAddress(accounts?.[0] ?? null);
+      // 1) Request MetaMask accounts
+      const [addr] = await eth.request({ method: "eth_requestAccounts" });
+      // 2) Create Clerk sign-in attempt with web3 strategy
+      const si: any = await signIn.create({ identifier: addr, strategy: "web3_metamask_signature" as any });
+      // 3) Get nonce to sign
+      const { nonce } = await si.prepareVerification();
+      // 4) Ask wallet to sign nonce
+      const signature = await eth.request({ method: "personal_sign", params: [nonce, addr] });
+      // 5) Verify signature to complete auth
+      await si.attemptVerification({ signature });
+
+      setAddress(addr as `0x${string}`);
       const cid: string = await eth.request({ method: "eth_chainId" });
       setChainId(cid ?? null);
     } catch (e) {
-      // user rejected or error
+      console.error(e);
     }
-  }, []);
+  }, [signInLoaded, signIn]);
 
   return (
     <section className="container space-y-6 py-8">
@@ -80,9 +92,9 @@ export default function InvestorSelfVerifyPage() {
           type="button"
           onClick={connect}
           className="inline-flex h-10 items-center justify-center rounded-md border bg-primary px-4 text-sm font-medium text-primary-foreground transition-colors hover:opacity-90"
-          disabled={loading}
+          disabled={loading || !signInLoaded}
         >
-          {loading ? "Checking wallet…" : "Connect Wallet"}
+          {loading ? "Checking wallet…" : "Authenticate Wallet"}
         </button>
       )}
 

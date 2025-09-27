@@ -12,6 +12,7 @@
     "clean": "rm -rf .next node_modules"
   },
   "dependencies": {
+    "@repo/database": "workspace:*",
     "@smallcase_defi/safe-passport": "workspace:*",
     "@selfxyz/qrcode": "latest",
     "viem": "^2.37.8",

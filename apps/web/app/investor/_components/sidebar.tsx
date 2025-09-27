@@ -3,13 +3,12 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
-import { LayoutDashboard, LineChart, ClipboardList, Settings, ShieldCheck, Layers3 } from "lucide-react";
+import { LayoutDashboard, LineChart, Settings, ShieldCheck, Layers3 } from "lucide-react";
 
 const items = [
   { title: "Dashboard", href: "/investor", icon: LayoutDashboard },
   { title: "Strategies", href: "/investor/strategies", icon: Layers3 },
   { title: "Portfolio", href: "/investor/portfolio", icon: LineChart },
-  { title: "Orders", href: "/investor/orders", icon: ClipboardList },
   { title: "KYC", href: "/investor/kyc", icon: ShieldCheck },
   { title: "Settings", href: "/investor/settings", icon: Settings },
 ] as const;
