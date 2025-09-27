@@ -1,5 +1,5 @@
-import { DEFAULT_MIN_AGE, DEFAULT_ENDPOINT_TYPE, type EndpointType } from './constants';
-
+import { DEFAULT_MIN_AGE, DEFAULT_ENDPOINT_TYPE, ACTION, ZERO_BYTES32, type EndpointType } from './constants';
+import { encodeUserData } from './encoding';
 /**
  * Frontend helper to build SelfAppBuilder disclosures for Client verification
  * - minimumAge >= 18
@@ -56,4 +56,49 @@ export function buildFrontendConfig(params: {
     disclosures,
     userDefinedData,
   } as const;
+}
+
+/**
+ * Build a full Self app config for the Investor flow (Client verify)
+ * Server-safe utility for API routes to return a JSON configuration.
+ */
+export function buildInvestorSelfConfig(params: {
+  contractAddress: `0x${string}`;
+  investorAddress: `0x${string}`;
+  endpointType?: EndpointType;
+  minimumAge?: number;
+  accessCode?: `0x${string}`;
+}) {
+  const { contractAddress, investorAddress, endpointType, minimumAge = DEFAULT_MIN_AGE, accessCode = ZERO_BYTES32 } = params;
+  const disclosures = getClientDisclosures({ minimumAge, requireNationality: true });
+  const userDefinedData = encodeUserData(ACTION.CLIENT_VERIFY, accessCode);
+  return buildFrontendConfig({
+    contractAddress,
+    userId: investorAddress,
+    endpointType,
+    disclosures,
+    userDefinedData,
+  });
+}
+
+/**
+ * Build a full Self app config for the Portfolio Manager flow (PM verify)
+ */
+export function buildPmSelfConfig(params: {
+  contractAddress: `0x${string}`;
+  pmAddress: `0x${string}`;
+  endpointType?: EndpointType;
+  excludedCountries?: string[];
+  accessCode?: `0x${string}`;
+}) {
+  const { contractAddress, pmAddress, endpointType, excludedCountries = [], accessCode = ZERO_BYTES32 } = params;
+  const disclosures = getPmDisclosures({ excludedCountries, requireNationality: true, requireIssuingState: true });
+  const userDefinedData = encodeUserData(ACTION.PM_VERIFY, accessCode);
+  return buildFrontendConfig({
+    contractAddress,
+    userId: pmAddress,
+    endpointType,
+    disclosures,
+    userDefinedData,
+  });
 }

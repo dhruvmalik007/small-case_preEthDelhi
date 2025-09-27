@@ -5,6 +5,7 @@ import { formatPct, formatCurrencyUSD } from "@/lib/format";
 import { RelativePerfChart } from "@/components/charts/RelativePerfChart";
 import { defaultBenchmarkFor } from "@/data/strategies";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { SubscribeDialog } from "@/components/strategy/SubscribeDialog";
 
 function HoldingsBar({ weights }: { weights: { label: string; weight: number }[] }) {
   const total = weights.reduce((a, b) => a + b.weight, 0) || 1;
@@ -22,7 +23,7 @@ function HoldingsBar({ weights }: { weights: { label: string; weight: number }[]
   );
 }
 
-export function StrategyDetail({ strategy }: { strategy: Strategy }) {
+export function  StrategyDetail({ strategy }: { strategy: Strategy }) {
   const apyLabel = `${strategy.expectedAPYRange.min.toFixed(1)}–${strategy.expectedAPYRange.max.toFixed(1)}%`;
   const weights = strategy.holdings.map((h) => ({ label: `${h.protocol} ${h.asset}`.trim(), weight: h.weightPct }));
 
@@ -101,6 +102,7 @@ export function StrategyDetail({ strategy }: { strategy: Strategy }) {
                 </div>
               </DialogContent>
             </Dialog>
+            <SubscribeDialog strategy={strategy} />
           </div>
         </div>
         <RelativePerfChart

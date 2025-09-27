@@ -4,10 +4,13 @@
   "compilerOptions": {
     "baseUrl": ".",
     "paths": {
+      "@smallcase_defi/safe-passport": ["../../packages/safe-passport/src/index.ts"],
+      "@smallcase_defi/safe-passport/*": ["../../packages/safe-passport/src/*"],
       "@/*": [
         "./*"
-      ]
+    ]
     },
+  
     "jsx": "preserve",
     "moduleResolution": "Bundler",
     "plugins": [
@@ -20,7 +23,8 @@
     "next-env.d.ts",
     "**/*.ts",
     "**/*.tsx",
-    ".next/types/**/*.ts"
+    ".next/types/**/*.ts",
+    "../../packages/safe-passport/src/**/*.ts"
   ],
   "exclude": [
     "node_modules",

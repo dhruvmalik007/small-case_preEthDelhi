@@ -7,9 +7,14 @@
   "types": "./index.ts",
   "scripts": {
     "analyze": "prisma generate --no-hints --schema=./prisma/schema.prisma",
-    "build": "echo \"to be build\"",
+    "generate": "prisma generate --schema=./prisma/schema.prisma",
+    "build": "pnpm run generate",
+    "prepare": "pnpm run generate",
     "clean": "git clean -xdf .cache .turbo dist node_modules",
-    "typecheck": "tsc --noEmit --emitDeclarationOnly false"
+    "typecheck": "tsc --noEmit --emitDeclarationOnly false",
+    "db:push": "prisma db push --schema=./prisma/schema.prisma",
+    "migrate": "prisma migrate dev --name init --schema=./prisma/schema.prisma",
+    "seed": "tsx seed.ts"
   },
   "dependencies": {
     "@neondatabase/serverless": "^1.0.0",
@@ -27,6 +32,7 @@
     "@types/ws": "^8.18.1",
     "bufferutil": "^4.0.9",
     "prisma": "6.4.1",
+    "tsx": "^4.19.0",
     "typescript": "^5.5.4"
   }
 }

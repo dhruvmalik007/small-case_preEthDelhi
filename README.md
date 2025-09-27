@@ -1,4 +1,97 @@
-# Turborepo Design System Starter
+# smallcase_defi — ETHGlobal New Delhi Hackathon 
+
+# team participants
+Mohit Agarwal (@mohitagarwal24)
+Adesh (@sneaxhuh’s)
+Raj Patel (imrraaj)
+Dhruv Malik (@dhruvmalik007)
+
+
+# About 
+This monorepo contains the implementation for a DeFi-native “smallcase” platform built for ETHGlobal New Delhi.  
+
+## What we’re building
+
+- A rules-based, thematic portfolio manager for on-chain strategies (mutual-fund-like UX) with automated rebalancing and composable DeFi integrations.
+- Wallet-first onboarding and compliance: Self Passport for PM and Investor verification, using on-chain attestations where applicable.
+- Production-grade monorepo: web app (Next.js), shared UI kit, Safe Passport package, Uniswap integration, database ORM.
+
+## Target prize tracks (typical ETHGlobal themes)
+
+- DeFi (DEX, LPs, lending, structured products)
+- Identity / KYC (on-chain or privacy-preserving verification)
+- Account Abstraction & Wallet UX (better onboarding, signatures, flows)
+- L2 Scaling and Deployments (build on an L2; testnet or mainnet)
+- Data / Indexing / Analytics
+- Cross-chain & Interoperability
+
+Reference: ETHGlobal events regularly feature these tracks and sponsor bounties. See the ETHGlobal event listing for current details and prize announcements:
+- ETHGlobal events: https://ethglobal.com/events
+- ETHGlobal New Delhi info: https://ethglobal.com/events/newdelhi
+
+## Package → Prize Track Mapping and Demo Plan
+
+| Package | Primary Track(s) | Example Sponsors (typical) | What we’ll demo | Prize notes |
+|---|---|---|---|---|
+| `packages/safe-passport` | Identity verification and conditional tests | Privy, Polygon ID (identity), Safe/Stackup (AA) | Self Passport widget for PM + Investor flows; wallet-auth with Clerk Web3 signing; PM on-chain verification check | Strong fit for identity/KYC and onboarding prizes |
+| `apps/web` (Next.js) | Wallet UX, AA, L2 deployments, DeFi | L2s (Optimism/Arbitrum/Polygon), Safe, MetaMask | End-to-end UX: account dropdown with Clerk Web3 auth, Investor KYC flow, PM onboarding wizard, dashboards | Can qualify for multiple sponsor bounties via integrations |
+| `packages/uniswap_integration` | DeFi (DEX/LP) | Uniswap | Strategy trade routing/mock execution; quotes and pool data | Direct line to DEX sponsor bounties |
+| `packages/database` | Data / Indexing / Analytics | The Graph, Covalent (ecosystem), Infra | Prisma schema + seed data for strategies, protocols, subscriptions; backtest placeholders | Supports data/indexing themes; complement DeFi track |
+| `packages/ui` | Wallet UX, Developer Experience | — | Shared components (modals, buttons, dropdowns) for consistent UX | Helps UX judging; not a standalone bounty |
+| `packages/portfolio_manager` | DeFi, Cross-chain (future) | L2s, bridging protocols | Strategy builder and publisher flows | Useful for DeFi category breadth |
+| `packages/eslint-config`, `packages/typescript-config` | DX / Quality | — | Shared lint/ts config | Foundation only |
+
+Notes on sponsors and prize pools: exact sponsors and amounts are announced per event; ETHGlobal circuits typically total >$100k in prizes across main awards and sponsor bounties. Always confirm current rules and categories on the official event pages.
+
+## Demo checklist (by track)
+
+- DeFi
+  - Strategy cards, Uniswap quoting, portfolio/allocations UI.
+- Identity / KYC
+  - Investor: Self verification; PM: Self verification + on-chain attestation check; Clerk Web3 wallet sign-in.
+- Wallet UX / AA
+  - Connect wallet, sign nonce via Clerk Web3 (prepareVerification → personal_sign → attemptVerification), account modal UX.
+- L2
+  - Deploy and run flows on a target L2 RPC; document chain IDs used.
+- Data/Indexing
+  - Seed script to bootstrap strategy/protocol data and subscriptions.
+
+## How to run locally
+
+1) Install deps and generate Prisma client
+```
+pnpm -w install
+pnpm --filter @repo/database generate
+```
+2) Set environment
+```
+# apps/web/.env
+NEXT_PUBLIC_SAFE_PASSPORT_ADDRESS=0x...
+NEXT_PUBLIC_RPC_URL=...
+NEXT_PUBLIC_SELF_ENDPOINT_TYPE=staging_celo
+
+# DATABASE_URL in your shell or root .env for packages/database
+```
+3) Database (dev)
+```
+pnpm --filter @repo/database db:push
+pnpm --filter @repo/database seed
+```
+4) Build packages and run web
+```
+pnpm --filter @smallcase_defi/safe-passport build
+pnpm --filter web dev
+```
+
+## Links & references
+
+- ETHGlobal events: https://ethglobal.com/events
+- ETHGlobal New Delhi (info/registration): https://ethglobal.com/events/newdelhi
+- Clerk Web3 (MetaMask signature-based auth): https://clerk.com/docs/authentication/web3/metamask
+
+---
+
+## Appendix: Turborepo Design System Starter
 
 This is a community-maintained example. If you experience a problem, please submit a pull request with a fix. GitHub Issues will be closed.
 
