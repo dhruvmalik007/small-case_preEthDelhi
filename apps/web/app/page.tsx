@@ -1,7 +1,6 @@
 import { Hero } from "@/components/sections/hero";
 import { StrategyCardWithRealData } from "@/components/strategy/StrategyCardWithRealData";
 import { strategies } from "@/data/strategies";
-import { PricingSection } from "@/components/sections/pricing";
 
 export default function HomePage() {
   const featured = strategies.slice(0, 8);
@@ -21,7 +20,6 @@ export default function HomePage() {
           ))}
         </div>
       </section>
-      <PricingSection />
     </div>
   );
 }

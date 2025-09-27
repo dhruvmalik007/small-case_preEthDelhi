@@ -9,6 +9,8 @@ import { RelativePerfChart } from "@/components/charts/RelativePerfChart";
 import { MonthlyReturnsChart } from "@/components/charts/MonthlyReturnsChart";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { fetchMultipleTokens, calculateStrategyPerformance, getTokenSymbolFromHolding, type TokenData } from "@/lib/data-service";
+import { InvestModal } from "@/components/investment/invest-modal";
+import { KYCStatus } from "@/components/kyc/kyc-status";
 
 function HoldingsBar({ weights }: { weights: { label: string; weight: number }[] }) {
   const total = weights.reduce((a, b) => a + b.weight, 0) || 1;
@@ -26,15 +28,15 @@ function HoldingsBar({ weights }: { weights: { label: string; weight: number }[]
   );
 }
 
-function TokenPriceDisplay({ 
-  holding, 
-  tokenData 
-}: { 
+function TokenPriceDisplay({
+  holding,
+  tokenData
+}: {
   holding: { protocol: string; asset: string; weightPct: number };
   tokenData: TokenData | null;
 }) {
   const tokenSymbol = getTokenSymbolFromHolding(holding);
-  
+
   if (!tokenData) {
     return (
       <div className="flex items-center justify-between rounded-md border p-3">
@@ -87,11 +89,11 @@ export function StrategyDetailWithRealData({ strategy }: { strategy: Strategy })
   useEffect(() => {
     async function fetchData() {
       setLoading(true);
-      
+
       // Get unique token symbols from holdings
       const tokenSymbols = Array.from(
         new Set(
-          strategy.holdings.map(holding => 
+          strategy.holdings.map(holding =>
             getTokenSymbolFromHolding(holding)
           )
         )
@@ -104,7 +106,7 @@ export function StrategyDetailWithRealData({ strategy }: { strategy: Strategy })
       // Calculate strategy performance
       const performance = calculateStrategyPerformance(strategy.holdings, data);
       setStrategyPerformance(performance);
-      
+
       setLoading(false);
     }
 
@@ -112,9 +114,9 @@ export function StrategyDetailWithRealData({ strategy }: { strategy: Strategy })
   }, [strategy]);
 
   const apyLabel = `${strategy.expectedAPYRange.min.toFixed(1)}–${strategy.expectedAPYRange.max.toFixed(1)}%`;
-  const weights = strategy.holdings.map((h) => ({ 
-    label: `${h.protocol} ${h.asset}`.trim(), 
-    weight: h.weightPct 
+  const weights = strategy.holdings.map((h) => ({
+    label: `${h.protocol} ${h.asset}`.trim(),
+    weight: h.weightPct
   }));
 
   if (loading) {
@@ -169,6 +171,14 @@ export function StrategyDetailWithRealData({ strategy }: { strategy: Strategy })
                 </div>
               </DialogContent>
             </Dialog>
+            <div className="flex items-center gap-2">
+              <KYCStatus />
+              <InvestModal strategy={strategy}>
+                <button className="rounded-md bg-green-600 px-3 py-1.5 text-sm text-white hover:bg-green-700">
+                  Invest
+                </button>
+              </InvestModal>
+            </div>
             <Dialog>
               <DialogTrigger asChild>
                 <button className="rounded-md bg-primary px-3 py-1.5 text-sm text-primary-foreground">Factsheet</button>
@@ -396,7 +406,7 @@ export function StrategyDetailWithRealData({ strategy }: { strategy: Strategy })
           <CardDescription>Detailed monthly performance breakdown with values</CardDescription>
         </CardHeader>
         <CardContent>
-          <MonthlyReturnsChart 
+          <MonthlyReturnsChart
             monthlyReturns={strategyPerformance?.monthlyReturns || strategy.backtest.monthlyReturns1Y}
           />
         </CardContent>

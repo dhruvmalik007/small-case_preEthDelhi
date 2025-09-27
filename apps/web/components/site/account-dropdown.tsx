@@ -3,6 +3,7 @@
 import * as React from "react";
 import Link from "next/link";
 import { SignedIn, SignedOut, SignInButton, SignOutButton, useUser } from "@clerk/nextjs";
+import { KYCStatus } from "@/components/kyc/kyc-status";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -19,7 +20,7 @@ import {
   HelpCircle,
   MessageSquare,
   ClipboardList,
-  CreditCard,
+  Shield,
 } from "lucide-react";
 
 export function AccountDropdown() {
@@ -80,15 +81,23 @@ export function AccountDropdown() {
 
         <div className="px-3 py-2">
           <DropdownMenuLabel className="px-0 py-0 text-[11px] uppercase tracking-wide">Personal Info</DropdownMenuLabel>
-          <div className="mt-2 flex items-center justify-between rounded-md border p-3 text-sm">
-            <span className="text-muted-foreground">{displayName}</span>
-            <SignedOut>
-              <SignInButton mode="modal">
-                <button className="text-blue-600 hover:underline">Log in</button>
-              </SignInButton>
-            </SignedOut>
+          <div className="mt-2 space-y-2">
+            <div className="flex items-center justify-between rounded-md border p-3 text-sm">
+              <span className="text-muted-foreground">{displayName}</span>
+              <SignedOut>
+                <SignInButton mode="modal">
+                  <button className="text-blue-600 hover:underline">Log in</button>
+                </SignInButton>
+              </SignedOut>
+              <SignedIn>
+                <Link href="/user" className="text-blue-600 hover:underline">Edit</Link>
+              </SignedIn>
+            </div>
             <SignedIn>
-              <Link href="/user" className="text-blue-600 hover:underline">Edit</Link>
+              <div className="flex items-center justify-between rounded-md border p-3 text-sm">
+                <span className="text-muted-foreground">KYC Status</span>
+                <KYCStatus />
+              </div>
             </SignedIn>
           </div>
         </div>
@@ -104,8 +113,8 @@ export function AccountDropdown() {
               </Link>
             </DropdownMenuItem>
             <DropdownMenuItem asChild>
-              <Link href="/account/subscriptions" className="flex w-full items-center gap-2 rounded-md px-2 py-2 text-sm hover:bg-accent">
-                <CreditCard className="h-4 w-4" /> Subscriptions
+              <Link href="/investor/kyc" className="flex w-full items-center gap-2 rounded-md px-2 py-2 text-sm hover:bg-accent">
+                <Shield className="h-4 w-4" /> KYC Status
               </Link>
             </DropdownMenuItem>
           </div>
