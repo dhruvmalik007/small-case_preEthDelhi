@@ -1,5 +1,8 @@
 {
   "$schema": "https://turborepo.com/schema.json",
+  "globalEnv": [
+    "CLERK_SECRET_KEY"
+  ],
   "tasks": {
     "build": {
       "inputs": [
@@ -7,10 +10,14 @@
         ".env*"
       ],
       "outputs": [
-        "dist/**"
+        "dist/**",
+        ".next/**"
       ],
       "dependsOn": [
         "^build"
+      ],
+      "env": [
+        "CLERK_SECRET_KEY"
       ]
     },
     "lint": {
@@ -20,10 +27,13 @@
     },
     "dev": {
       "cache": false,
-      "persistent": true
+      "persistent": true,
+      "env": [
+        "CLERK_SECRET_KEY"
+      ]
     },
     "clean": {
       "cache": false
-    },
+    }
   }
 }
