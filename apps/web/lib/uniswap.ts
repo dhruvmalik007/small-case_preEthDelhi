@@ -2,11 +2,11 @@
 // This is a simplified implementation for demonstration purposes
 
 export interface InvestmentParams {
-    strategySlug: string;
-    amount: number;
-    walletAddress: string;
-    tokenIn: string; // Input token (e.g., USDC)
-    tokenOut: string; // Output token (e.g., strategy token)
+        strategySlug: string;
+        amount: number;
+        walletAddress: string;
+        tokenIn: string; // Input token (e.g., USDC)
+        tokenOut: string; // Output token (e.g., strategy token)
 }
 
 export interface SwapQuote {
@@ -46,34 +46,24 @@ export class UniswapV3Service {
         walletAddress: string
     ): Promise<InvestmentResult> {
         try {
-            // In a real implementation, this would:
-            // 1. Connect to the user's wallet
-            // 2. Create and sign the transaction
-            // 3. Submit to the blockchain
-            // 4. Wait for confirmation
-
-            console.log("Executing swap:", {
-                from: walletAddress,
-                amountIn: quote.inputAmount,
-                amountOut: quote.outputAmount,
-                route: quote.route,
+            // Call local API which executes a real swap against the forked node
+            const base = process.env.NEXT_PUBLIC_API_BASE || ""; // optional override
+            const res = await fetch(`${base}/api/invest`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    strategySlug: params.strategySlug,
+                    amount: Number(quote.inputAmount),
+                    walletAddress,
+                }),
             });
-
-            // Simulate transaction processing
-            await new Promise(resolve => setTimeout(resolve, 2000));
-
-            // Mock successful transaction
-            const mockTxHash = `0x${Math.random().toString(16).substr(2, 64)}`;
-
-            return {
-                success: true,
-                transactionHash: mockTxHash,
-            };
+            const json = await res.json();
+            if (!res.ok || !json?.success) {
+                return { success: false, error: json?.error || `HTTP ${res.status}` };
+            }
+            return { success: true, transactionHash: json.transactionHash };
         } catch (error) {
-            return {
-                success: false,
-                error: error instanceof Error ? error.message : "Unknown error",
-            };
+            return { success: false, error: error instanceof Error ? error.message : "Unknown error" };
         }
     }
 

@@ -63,12 +63,13 @@ contract ConfigureHook is Script {
         uint256 compCooldown = vm.envOr("COMPOUND_COOLDOWN", uint256(3600));
         uint256 minFees = vm.envOr("MIN_FEES", uint256(0));
 
+        bool hookless = vm.envOr("POOL_HOOKLESS", false);
         PoolKey memory key = PoolKey({
             currency0: Currency.wrap(token0),
             currency1: Currency.wrap(token1),
             fee: uint24(feeTmp),
             tickSpacing: int24(int256(tsTmp)),
-            hooks: IHooks(hookAddr)
+            hooks: IHooks(hookless ? address(0) : hookAddr)
         });
 
         MultiPolicyHook.RangeParams memory range = MultiPolicyHook.RangeParams({

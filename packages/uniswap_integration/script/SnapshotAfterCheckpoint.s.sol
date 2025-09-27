@@ -17,25 +17,27 @@ contract SnapshotAfterCheckpoint is Script {
     function run() external {
         uint256 pk = vm.envUint("PRIVATE_KEY");
         address regAddr = vm.envAddress("REGISTRY");
-        address vaultAddr = vm.envAddress("VAULT");
         bytes32 strategyId = vm.envBytes32("STRATEGY_ID");
         bytes32 indexId = vm.envOr("INDEX_ID", bytes32(0));
         if (indexId == bytes32(0)) indexId = keccak256(abi.encodePacked("DEMO-INDEX"));
-
+        bool metricsOnly = vm.envOr("METRICS_ONLY", false);
         uint256 navOverride = vm.envOr("NAV_USD_1E18", uint256(0));
 
         UniswapStrategyRegistry reg = UniswapStrategyRegistry(regAddr);
-        UniswapLPVault vault = UniswapLPVault(vaultAddr);
 
         vm.startBroadcast(pk);
-        // Dummy rebalance (no-op) + checkpoint
-        vault.rebalance();
-        if (navOverride != 0) {
-            vault.checkpointByNav(navOverride);
-        } else {
-            // bump NAV by +2% relative to last PPS if seeded at 1.0
-            // In this minimal example we don't read previous NAV, just emit another snapshot
-            vault.checkpointByNav(102e18);
+        if (!metricsOnly) {
+            address vaultAddr = vm.envAddress("VAULT");
+            UniswapLPVault vault = UniswapLPVault(vaultAddr);
+            // Dummy rebalance (no-op) + checkpoint
+            vault.rebalance();
+            if (navOverride != 0) {
+                vault.checkpointByNav(navOverride);
+            } else {
+                // bump NAV by +2% relative to last PPS if seeded at 1.0
+                // In this minimal example we don't read previous NAV, just emit another snapshot
+                vault.checkpointByNav(102e18);
+            }
         }
 
         // Ensure index exists and includes the strategyId, then snapshot
