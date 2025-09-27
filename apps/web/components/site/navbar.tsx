@@ -3,6 +3,7 @@ import { ThemeToggle } from "@/components/site/theme-toggle";
 import { Search } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { AccountDropdown } from "@/components/site/account-dropdown";
+import { WalletConnect } from "@/components/wallet/wallet-connect";
 
 export function Navbar() {
   return (
@@ -26,6 +27,7 @@ export function Navbar() {
             <Search className="h-4 w-4" />
             <span className="hidden sm:inline">Search</span>
           </Button>
+          <WalletConnect />
           <ThemeToggle />
           <AccountDropdown />
         </div>

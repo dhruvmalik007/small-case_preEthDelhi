@@ -1,27 +1,36 @@
-// "use client";
+"use client";
 
-// import { PrivyProvider } from "@privy-io/react-auth";
-// import React from "react";
+import { PrivyProvider } from "@privy-io/react-auth";
+import type { ReactNode } from "react";
 
-// export function AppPrivyProvider({ children }: { children: React.ReactNode }) {
-//   const appId = process.env.NEXT_PUBLIC_PRIVY_APP_ID as string | undefined;
-//   if (!appId) {
-//     // Render children without Privy to avoid runtime crash if not configured
-//     return <>{children}</>;
-//   }
-//   return (
-//     <PrivyProvider
-//       appId={appId}
-//       config={{
-//         loginMethods: ["wallet"],
-//         appearance: {
-//           theme: "light",
-//         },
-//         // Disable email/social; only wallets are allowed
-//         embeddedWallets: { createOnLogin: "users-choice" },
-//       }}
-//     >
-//       {children}
-//     </PrivyProvider>
-//   );
-// }
+interface AppPrivyProviderProps {
+    children: ReactNode;
+}
+
+export function AppPrivyProvider({ children }: AppPrivyProviderProps) {
+    const privyAppId = process.env.NEXT_PUBLIC_PRIVY_APP_ID;
+
+    if (!privyAppId) {
+        console.warn("NEXT_PUBLIC_PRIVY_APP_ID not found. Please set up Privy configuration.");
+        return <>{children}</>;
+    }
+
+    return (
+        <PrivyProvider
+            appId={privyAppId}
+            config={{
+                appearance: {
+                    theme: "light",
+                    accentColor: "#676FFF",
+                    logo: "https://your-domain.com/logo.png",
+                },
+                embeddedWallets: {
+                    createOnLogin: "users-without-wallets",
+                },
+                loginMethods: ["email", "wallet", "google", "twitter"],
+            }}
+        >
+            {children}
+        </PrivyProvider>
+    );
+}

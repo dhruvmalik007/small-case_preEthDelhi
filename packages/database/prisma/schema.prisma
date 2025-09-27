@@ -64,11 +64,6 @@ enum KycStatus {
   REJECTED
 }
 
-enum SubscriptionStatus {
-  ACTIVE
-  CANCELED
-  EXPIRED
-}
 
 // ============ Core Catalogs (from Data Engineering Pipeline) ============
 
@@ -128,21 +123,8 @@ model User {
   updatedAt    DateTime   @updatedAt
 
   managedStrategies Strategy[] @relation("ManagerStrategies")
-  subscriptions     Subscription[] @relation("UserSubscriptions")
 }
 
-model Subscription {
-  id          String    @id @default(uuid())
-  investorId  String
-  investor    User      @relation("UserSubscriptions", fields: [investorId], references: [id])
-  strategyId  String
-  strategy    Strategy  @relation(fields: [strategyId], references: [id])
-  status      SubscriptionStatus @default(ACTIVE)
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
-
-  @@unique([investorId, strategyId])
-}
 
 // ============ Strategies (from strategies.ts + Architecture) ============
 
@@ -193,7 +175,6 @@ model Strategy {
   backtest             StrategyBacktest?
   benchmark            StrategyBenchmark?
   investorProfile      StrategyInvestorProfile?
-  subscriptions        Subscription[]
 
   createdAt            DateTime          @default(now())
   updatedAt            DateTime          @updatedAt

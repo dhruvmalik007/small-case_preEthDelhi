@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import { Strategy, strategies as allStrategies, StrategyCategory, RiskLevel } from "@/data/strategies";
-import { StrategyCard } from "@/components/strategy/StrategyCard";
+import { StrategyCardWithRealData } from "@/components/strategy/StrategyCardWithRealData";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { RelativePerfChart } from "@/components/charts/RelativePerfChart";
@@ -196,8 +196,6 @@ export function StrategiesListClient() {
           <RelativePerfChart
             strategyLabel={selected.name}
             strategyMonthly={selected.backtest.monthlyReturns1Y}
-            benchmarkLabel={(selected.benchmark ?? defaultBenchmarkFor(selected)).label}
-            benchmarkMonthly={(selected.benchmark ?? defaultBenchmarkFor(selected)).monthlyReturns1Y}
           />
         </div>
       )}
@@ -232,7 +230,7 @@ export function StrategiesListClient() {
 
       <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
         {strategies.map((s: Strategy) => (
-          <StrategyCard key={s.slug} strategy={s} onHover={(x) => setHoveredSlug(x.slug)} />
+          <StrategyCardWithRealData key={s.slug} strategy={s} onHover={(x) => setHoveredSlug(x.slug)} />
         ))}
       </div>
 

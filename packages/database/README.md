@@ -4,7 +4,7 @@ Type-safe ORM package for `smallcase_defi`, modeled after the `vercel/next-forge
 
 - Prisma Client configured for Postgres (Neon adapter by default)
 - Zod-based env validation for `DATABASE_URL`
-- Schemas covering protocol ingestion, strategies, users/subscriptions, and analytics fields
+- Schemas covering protocol ingestion, strategies, users, and analytics fields
 
 ## Contents
 
@@ -88,7 +88,7 @@ Note: Percentages are stored as basis points (`weightBps`), decimal strings for 
 ## Schema overview
 
 - **Protocol/Asset Universe** — mirrors DeFiLlama ingestion (`protocol`, `asset_universe`, optional `yield_snapshots`).
-- **Users & Subscriptions** — `user` (wallet-first), `subscription` between user and strategy with status.
+- **Users** — `user` (wallet-first) with role-based access.
 - **Strategy** — aligns with `apps/web/data/strategies.ts` and the architecture doc, including:
   - enums: `StrategyCategory`, `RiskLevel`, `Volatility`, `Rebalancing`
   - arrays: `chains`, `protocols`, `tags`
