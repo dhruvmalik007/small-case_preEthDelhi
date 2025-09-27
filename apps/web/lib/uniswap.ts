@@ -46,6 +46,36 @@ export class UniswapV3Service {
         walletAddress: string
     ): Promise<InvestmentResult> {
         try {
+            // Attempt a simulated wallet-sign step to prompt the user
+            // We sign an intent message (not broadcast) and include it in the API call
+            let signedMessage: string | undefined;
+            let signMessage: string | undefined;
+            const maybeWindow = typeof window !== "undefined" ? (window as any) : undefined;
+            const provider = maybeWindow?.ethereum;
+            if (provider && walletAddress) {
+                try {
+                    const ts = Math.floor(Date.now() / 1000);
+                    const nonce = Math.random().toString(36).slice(2);
+                    signMessage = `I authorize a simulated investment on local fork.\nStrategy: ${params.strategySlug}\nAmountIn: ${quote.inputAmount}\nFrom: ${walletAddress}\nTimestamp: ${ts}\nNonce: ${nonce}`;
+                    const hex = (str: string) => {
+                        const enc = new TextEncoder().encode(str);
+                        let out = "0x";
+                        for (let i = 0; i < enc.length; i++) out += enc[i].toString(16).padStart(2, "0");
+                        return out;
+                    };
+                    // Ensure wallet is connected; will prompt if not
+                    try { await provider.request({ method: "eth_requestAccounts" }); } catch {}
+                    signedMessage = await provider.request({
+                        method: "personal_sign",
+                        params: [hex(signMessage), walletAddress],
+                    });
+                } catch (e) {
+                    // Non-fatal: continue without signature
+                    signedMessage = "";
+                    signMessage = "";
+                }
+            }
+
             // Call local API which executes a real swap against the forked node
             const base = process.env.NEXT_PUBLIC_API_BASE || ""; // optional override
             const res = await fetch(`${base}/api/invest`, {
@@ -55,6 +85,9 @@ export class UniswapV3Service {
                     strategySlug: params.strategySlug,
                     amount: Number(quote.inputAmount),
                     walletAddress,
+                    // optional signing artifacts for audit/UX (server currently does not verify)
+                    signMessage,
+                    signature: signedMessage,
                 }),
             });
             const json = await res.json();
