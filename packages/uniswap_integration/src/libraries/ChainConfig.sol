@@ -14,9 +14,18 @@ library ChainConfig {
         address permit2;
     }
 
+    /// @notice Simple pool metadata for curated pools per chain
+    struct PoolMeta {
+        address token0;
+        address token1;
+        uint24 fee;         // 500, 3000, 10000 etc.
+        int24 tickSpacing;  // e.g., 10/60/200
+    }
+
     // Chain IDs
     uint256 internal constant CHAINID_SEPOLIA = 11155111;
     uint256 internal constant CHAINID_UNICHAIN_SEPOLIA = 1301;
+    uint256 internal constant CHAINID_UNICHAIN_MAINNET = 130;
 
     /// @notice Get Uniswap v4 core/periphery addresses for a chainId
     function get(uint256 chainId) internal pure returns (V4Addresses memory a) {
@@ -36,6 +45,17 @@ library ChainConfig {
                 quoter: 0x56DCD40A3F2d466F48e7F48bDBE5Cc9B92Ae4472,
                 stateView: 0xc199F1072a74D4e905ABa1A84d9a45E2546B6222,
                 universalRouter: 0xf70536B3bcC1bD1a972dc186A2cf84cC6da6Be5D,
+                permit2: 0x000000000022D473030F116dDEE9F6B43aC78BA3
+            });
+        } else if (chainId == CHAINID_UNICHAIN_MAINNET) {
+            // Unichain Mainnet: 130
+            // Source: Unichain Docs - Contract Addresses (v4 deployments)
+            a = V4Addresses({
+                poolManager: 0x1F98400000000000000000000000000000000004,
+                positionManager: 0x4529A01c7A0410167c5740C487A8DE60232617bf,
+                quoter: 0x333E3C607B141b18fF6de9f258db6e77fE7491E0,
+                stateView: 0x86e8631A016F9068C3f085fAF484Ee3F5fDee8f2,
+                universalRouter: 0xEf740bf23aCaE26f6492B10de645D6B98dC8Eaf3,
                 permit2: 0x000000000022D473030F116dDEE9F6B43aC78BA3
             });
         } else if (chainId == CHAINID_SEPOLIA) {
@@ -59,6 +79,50 @@ library ChainConfig {
                 universalRouter: 0x3A9D48AB9751398BbFa63ad67599Bb04e4BdF98b,
                 permit2: 0x000000000022D473030F116dDEE9F6B43aC78BA3
             });
+        } else {
+            revert("ChainConfig: unsupported chainId");
+        }
+    }
+
+    /// @notice Curated default pools on given chain (tokens must be ERC20 deployed on the chain)
+    /// @dev For Unichain Sepolia we include WETH/USDC 0.3% with tickSpacing=60.
+    ///      For Unichain Mainnet include ETH/USDC v4 0.05% using canonical addresses.
+    function getDefaultPools(uint256 chainId) internal pure returns (PoolMeta[] memory p) {
+        if (chainId == CHAINID_UNICHAIN_SEPOLIA) {
+            // Canonical tokens from Unichain docs
+            address WETH = 0x4200000000000000000000000000000000000006;
+            address USDC = 0x31d0220469e10c4E71834a79b1f276d740d3768F;
+            p = new PoolMeta[](1);
+            // Ensure token ordering token0 < token1 lexicographically (addresses)
+            (address t0, address t1) = WETH < USDC ? (WETH, USDC) : (USDC, WETH);
+            p[0] = PoolMeta({ token0: t0, token1: t1, fee: uint24(3000), tickSpacing: int24(60) });
+        } else if (chainId == CHAINID_UNICHAIN_MAINNET) {
+            // Unichain mainnet: use WETH-like canonical wrapper for ETH if needed.
+            // ETH/USDC v4 0.05% (tickSpacing ~ 10 in v3; v4 mirrors this mapping)
+            // USDC from Unichain docs (mainnet)
+            address USDC_MAIN = 0x078D782b760474a361dDA0AF3839290b0EF57AD6;
+            // Wrapped native on many OP-stack chains: 0x420000...0006. If Unichain differs, update here.
+            address WETH_LIKE = 0x4200000000000000000000000000000000000006;
+            p = new PoolMeta[](1);
+            (address t0m, address t1m) = WETH_LIKE < USDC_MAIN ? (WETH_LIKE, USDC_MAIN) : (USDC_MAIN, WETH_LIKE);
+            p[0] = PoolMeta({ token0: t0m, token1: t1m, fee: uint24(500), tickSpacing: int24(10) });
+        } else if (chainId == CHAINID_SEPOLIA) {
+            p = new PoolMeta[](0);
+        } else {
+            revert("ChainConfig: unsupported chainId");
+        }
+    }
+
+    /// @notice Curated v4 pool identifiers (as displayed by Uniswap app) by chain
+    /// @dev Example for Unichain Mainnet: ETH/USDC v4 0.05% poolId scraped from app
+    function getCuratedPoolIds(uint256 chainId) internal pure returns (bytes32[] memory ids) {
+        if (chainId == CHAINID_UNICHAIN_MAINNET) {
+            ids = new bytes32[](1);
+            ids[0] = 0x3258f413c7a88cda2fa8709a589d221a80f6574f63df5a5b6774485d8acc39d9; // ETH/USDC 0.05%
+        } else if (chainId == CHAINID_UNICHAIN_SEPOLIA) {
+            ids = new bytes32[](0);
+        } else if (chainId == CHAINID_SEPOLIA) {
+            ids = new bytes32[](0);
         } else {
             revert("ChainConfig: unsupported chainId");
         }

@@ -12,7 +12,8 @@ contract UniswapStrategyRegistry is OwnableLite {
     using StrategyEvents for *;
 
     struct StrategyInfo {
-        address vault;      // implements IRebalanceableVault & IStrategyMetrics
+        address vault;      // optional: implements IRebalanceableVault & IStrategyMetrics
+        address metrics;    // optional: implements IStrategyMetrics (used when vault is not present)
         address hook;       // optional associated hook
         bool active;
     }
@@ -39,14 +40,23 @@ contract UniswapStrategyRegistry is OwnableLite {
     function registerStrategy(bytes32 id, address vault, address hook) external onlyOwner {
         require(id != bytes32(0), "REG:id=0");
         require(vault != address(0), "REG:vault=0");
-        strategies[id] = StrategyInfo({vault: vault, hook: hook, active: true});
+        strategies[id] = StrategyInfo({vault: vault, metrics: address(0), hook: hook, active: true});
         emit StrategyRegistered(id, vault, hook);
+        emit StrategyActivated(id, true);
+    }
+
+    /// @notice Register a metrics-only strategy (no vault). The metrics contract must implement IStrategyMetrics
+    function registerMetricsStrategy(bytes32 id, address metrics, address hook) external onlyOwner {
+        require(id != bytes32(0), "REG:id=0");
+        require(metrics != address(0), "REG:metrics=0");
+        strategies[id] = StrategyInfo({vault: address(0), metrics: metrics, hook: hook, active: true});
+        emit StrategyRegistered(id, address(0), hook);
         emit StrategyActivated(id, true);
     }
 
     function setStrategyActive(bytes32 id, bool active) external onlyOwner {
         StrategyInfo storage s = strategies[id];
-        require(s.vault != address(0), "REG:unknown");
+        require(s.vault != address(0) || s.metrics != address(0), "REG:unknown");
         s.active = active;
         emit StrategyActivated(id, active);
     }
@@ -60,12 +70,14 @@ contract UniswapStrategyRegistry is OwnableLite {
     function rebalance(bytes32 id) external onlyOwner {
         StrategyInfo storage s = strategies[id];
         require(s.active, "REG:inactive");
+        require(s.vault != address(0), "REG:no-vault");
         IRebalanceableVault(s.vault).rebalance();
     }
 
     function compound(bytes32 id) external onlyOwner {
         StrategyInfo storage s = strategies[id];
         require(s.active, "REG:inactive");
+        require(s.vault != address(0), "REG:no-vault");
         IRebalanceableVault(s.vault).compoundFees();
     }
 
@@ -103,12 +115,14 @@ contract UniswapStrategyRegistry is OwnableLite {
         int256 weightedPnlNumerator;  // sum(pnlBps * nav)
         for (uint256 i = 0; i < len; i++) {
             StrategyInfo storage s = strategies[ix.constituents[i]];
-            if (!s.active || s.vault == address(0)) continue;
+            if (!s.active) continue;
+            address metricsProvider = s.metrics != address(0) ? s.metrics : s.vault;
+            if (metricsProvider == address(0)) continue;
             (
                 uint256 navUsd1e18,
                 uint256 pps1e18,
                 int256 pnlBps_
-            ) = IStrategyMetrics(s.vault).getStrategyMetrics();
+            ) = IStrategyMetrics(metricsProvider).getStrategyMetrics();
             totalNav += navUsd1e18;
             // accumulate weighted numerators; guard against overflow by using 256-bit
             weightedPpsNumerator += (pps1e18 * navUsd1e18) / 1e18; // keep result in 1e18 scale

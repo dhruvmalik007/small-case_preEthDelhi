@@ -15,6 +15,7 @@ import {ChainConfig} from "../src/libraries/ChainConfig.sol";
 import {IStateViewMinimal} from "../src/interfaces/IStateViewMinimal.sol";
 import {MultiPolicyHook} from "../src/hooks/MultiPolicyHook.sol";
 import {UniswapLPVault} from "../src/strategy/UniswapLPVault.sol";
+import {PoolMetricsAdapter} from "../src/adapters/PoolMetricsAdapter.sol";
 import {UniswapStrategyRegistry} from "../src/registry/UniswapStrategyRegistry.sol";
 import {Vm} from "forge-std/Vm.sol";
 import {console2 as console} from "forge-std/console2.sol";
@@ -65,6 +66,66 @@ contract E2EUnichainSepoliaTest is Test {
         console.log("  USDC       :"); console.logAddress(TOKEN_USDC);
         console.log("  timestamp  :"); console.logUint(block.timestamp);
     }
+
+/// Metrics-only test: no vault, adapter reads pool via StateView and registry snapshots from metrics
+contract MetricsOnlyRegistryTest is Test {
+    using CurrencyLibrary for Currency;
+
+    ChainConfig.V4Addresses a;
+    address admin;
+    address TOKEN_WETH;
+    address TOKEN_USDC;
+
+    function _sort(address aAddr, address bAddr) internal pure returns (address, address) {
+        return aAddr < bAddr ? (aAddr, bAddr) : (bAddr, aAddr);
+    }
+
+    function setUp() public {
+        string memory rpc = vm.envString("RPC_URL_UNICHAIN_SEPOLIA");
+        vm.createSelectFork(rpc);
+        a = ChainConfig.get(ChainConfig.CHAINID_UNICHAIN_SEPOLIA);
+        admin = address(0xA11CE);
+        TOKEN_WETH = vm.envOr("TOKEN_WETH", address(0x4200000000000000000000000000000000000006));
+        TOKEN_USDC = vm.envOr("TOKEN_USDC", address(0x31d0220469e10c4E71834a79b1f276d740d3768F));
+    }
+
+    function test_metrics_only_index_snapshot() public {
+        // Build a poolKey with no hook to simulate pre-existing pool; initialize at 1:1 price
+        (address token0, address token1) = _sort(TOKEN_WETH, TOKEN_USDC);
+        PoolKey memory key = PoolKey({
+            currency0: Currency.wrap(token0),
+            currency1: Currency.wrap(token1),
+            fee: uint24(3000),
+            tickSpacing: int24(60),
+            hooks: IHooks(address(0))
+        });
+        uint160 sqrtPriceX96 = 79228162514264337593543950336; // 2^96
+        IPoolManager(a.poolManager).initialize(key, sqrtPriceX96);
+
+        // Metrics adapter seeded off current price
+        bytes32 strategyId = keccak256(abi.encodePacked("METRICS-ONLY-STRATEGY"));
+        PoolMetricsAdapter adapter = new PoolMetricsAdapter(strategyId, admin);
+        vm.prank(admin);
+        adapter.setPoolKey(token0, token1, uint24(3000), int24(60), address(0));
+        vm.prank(admin);
+        adapter.seedBaseline(100e18);
+
+        // Register metrics-only strategy and snapshot an index
+        UniswapStrategyRegistry reg = new UniswapStrategyRegistry(admin);
+        vm.prank(admin);
+        reg.registerMetricsStrategy(strategyId, address(adapter), address(0));
+        bytes32 indexId = keccak256(abi.encodePacked("METRICS-ONLY-INDEX"));
+        bytes32[] memory cons = new bytes32[](1); cons[0] = strategyId;
+        vm.prank(admin); reg.registerIndex(indexId, cons);
+
+        vm.recordLogs(); reg.snapshotIndex(indexId);
+        Vm.Log[] memory logs = vm.getRecordedLogs();
+        bool foundComposite = false;
+        bytes32 topic = keccak256("CompositeNAVSnapshot(bytes32,uint256,uint256,int256,uint256)");
+        for (uint256 i = 0; i < logs.length; i++) { if (logs[i].topics.length > 0 && logs[i].topics[0] == topic) { foundComposite = true; break; } }
+        assertTrue(foundComposite, "CompositeNAVSnapshot not emitted (metrics-only)");
+    }
+}
 
     // --- Helpers: number to string and pretty single-line logs ---
     function _uToStr(uint256 v) internal pure returns (string memory s) {

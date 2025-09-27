@@ -219,6 +219,30 @@ contract MultiPolicyHook is BaseHook {
         return (BaseHook.afterSwap.selector, 0);
     }
 
+    /// @notice Manually refresh signals without requiring a swap
+    /// @dev Useful for managing pre-existing pools not created with this hook address
+    function poke(PoolKey calldata key) external onlyKeeperOrAdmin {
+        PoolId id = key.toId();
+        PoolState storage st = poolState[id];
+        if (st.paused) return;
+        (uint160 priceX96,) = _getSqrtPriceX96(key);
+        if (priceX96 == 0) return;
+        if (st.vol.enabled) {
+            if (st.lastPriceX96 != 0) {
+                int256 p = int256(uint256(priceX96));
+                int256 p0 = int256(uint256(st.lastPriceX96));
+                int128 r = int128(((p - p0) * 1e9) / p0);
+                _updateEWMA(id, st, r);
+                _updateWidthSignal(id, st);
+                emit PoolReturnSample(id, priceX96, r, block.timestamp);
+            }
+        }
+        st.lastPriceX96 = priceX96;
+        _updateRebalanceSignal(id, st, priceX96);
+    }
+
+    
+
     function _getSqrtPriceX96(PoolKey calldata key) internal view returns (uint160 priceX96, int24 tick) {
         // Preferred path: use injected StateView lens
         if (address(stateView) != address(0)) {
@@ -237,7 +261,7 @@ contract MultiPolicyHook is BaseHook {
     }
 
     function _updateEWMA(PoolId id, PoolState storage st, int128 r) internal {
-        uint16 lbps = st.vol.lambdaBps == 0 ? 9950 : st.vol.lambdaBps; // default 0.995
+        uint16 lbps = st.vol.lambdaBps == 0 ? 9950 : st.vol.lambdaBps; // default 0.995/ meaning 5% change in the value param
         // ewMean = λ * mean + (1-λ) * r
         // ewVar  = λ * var  + (1-λ) * (r - mean)^2
         int128 mean = st.vol.ewMean;
