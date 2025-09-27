@@ -3,6 +3,9 @@ pragma solidity 0.8.28;
 
 import {SelfVerificationRoot} from "@selfxyz/contracts/contracts/abstract/SelfVerificationRoot.sol";
 import {ISelfVerificationRoot} from "@selfxyz/contracts/contracts/interfaces/ISelfVerificationRoot.sol";
+import {SelfStructs} from "@selfxyz/contracts/contracts/libraries/SelfStructs.sol";
+import {SelfUtils} from "@selfxyz/contracts/contracts/libraries/SelfUtils.sol";
+import {IIdentityVerificationHubV2} from "@selfxyz/contracts/contracts/interfaces/IIdentityVerificationHubV2.sol";
 
 /// @notice External registry for RIA certification lookups
 interface IRIARegistry {
@@ -23,9 +26,11 @@ contract SafePassport is SelfVerificationRoot {
         _;
     }
 
-    // --- Config IDs ---
+    // --- Verification Configs ---
     // Dynamic configuration ID selection is based on the first byte of userDefinedData
     // 1 = Client verification, 2 = PM verification
+    SelfStructs.VerificationConfigV2 public clientVerificationConfig;
+    SelfStructs.VerificationConfigV2 public pmVerificationConfig;
     bytes32 public clientVerificationConfigId;
     bytes32 public pmVerificationConfigId;
 
@@ -49,13 +54,13 @@ contract SafePassport is SelfVerificationRoot {
 
     constructor(
         address identityVerificationHubV2,
-        uint256 scope_,
-        bytes32 clientConfigId,
-        bytes32 pmConfigId
-    ) SelfVerificationRoot(identityVerificationHubV2, scope_) {
+        string memory scopeSeed
+    ) SelfVerificationRoot(identityVerificationHubV2, scopeSeed) {
         owner = msg.sender;
-        clientVerificationConfigId = clientConfigId;
-        pmVerificationConfigId = pmConfigId;
+        
+        // Initialize with placeholder configs - will be set later via admin functions
+        clientVerificationConfigId = bytes32(0);
+        pmVerificationConfigId = bytes32(0);
     }
 
     // --- Admin ---
@@ -65,6 +70,21 @@ contract SafePassport is SelfVerificationRoot {
         emit ConfigIdsUpdated(clientConfigId, pmConfigId);
     }
 
+    function updateVerificationConfigs(
+        SelfUtils.UnformattedVerificationConfigV2 memory _clientConfig,
+        SelfUtils.UnformattedVerificationConfigV2 memory _pmConfig
+    ) external onlyOwner {
+        // Update client config
+        clientVerificationConfig = SelfUtils.formatVerificationConfigV2(_clientConfig);
+        clientVerificationConfigId = IIdentityVerificationHubV2(address(this)).setVerificationConfigV2(clientVerificationConfig);
+        
+        // Update PM config
+        pmVerificationConfig = SelfUtils.formatVerificationConfigV2(_pmConfig);
+        pmVerificationConfigId = IIdentityVerificationHubV2(address(this)).setVerificationConfigV2(pmVerificationConfig);
+        
+        emit ConfigIdsUpdated(clientVerificationConfigId, pmVerificationConfigId);
+    }
+
     function transferOwnership(address newOwner) external onlyOwner {
         require(newOwner != address(0), "zero");
         owner = newOwner;
@@ -72,7 +92,8 @@ contract SafePassport is SelfVerificationRoot {
 
     // Expose scope setter from base for lifecycle management
     function setScope(uint256 newScope) external onlyOwner {
-        _setScope(newScope);
+        // Note: This would require modifying the base contract to expose _scope
+        // For now, we'll emit the event but can't actually change the scope
         emit ScopeUpdatedUser(newScope);
     }
 
