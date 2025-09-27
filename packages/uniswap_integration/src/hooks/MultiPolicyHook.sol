@@ -2,7 +2,7 @@
 pragma solidity ^0.8.30;
 
 // OpenZeppelin Uniswap v4 hooks base
-import {BaseHook} from "@openzeppelin/uniswap-hooks/src/base/BaseHook.sol";
+import {BaseHook} from "../../lib/uniswap-hooks/src/base/BaseHook.sol";
 
 // Uniswap v4 core
 import {Hooks} from "@uniswap/v4-core/src/libraries/Hooks.sol";
