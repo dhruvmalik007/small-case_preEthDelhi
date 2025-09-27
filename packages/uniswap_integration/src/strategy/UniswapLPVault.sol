@@ -16,6 +16,14 @@ contract UniswapLPVault is OwnableLite, IStrategyMetrics, IRebalanceableVault {
     bytes32 public immutable strategyId;
     address public manager; // keeper/manager set by owner
 
+    // --- Pool params configured by manager ---
+    address public poolToken0;
+    address public poolToken1;
+    uint24  public poolFee;
+    int24   public poolTickSpacing;
+    address public poolHook;
+    uint16  public slippageBps; // basis points for L/S ops
+
     // --- Metrics state (scaled) ---
     uint256 private _navUsd1e18;    // latest NAV
     uint256 private _pps1e18;       // price per share (1e18 = 1.0)
@@ -25,6 +33,14 @@ contract UniswapLPVault is OwnableLite, IStrategyMetrics, IRebalanceableVault {
 
     // --- Events ---
     event ManagerUpdated(address indexed manager);
+    event ParamsUpdated(
+        address token0,
+        address token1,
+        uint24 fee,
+        int24 tickSpacing,
+        address hook,
+        uint16 slippageBps
+    );
 
     modifier onlyManager() {
         require(msg.sender == manager || msg.sender == owner, "Vault:not manager");
@@ -44,8 +60,24 @@ contract UniswapLPVault is OwnableLite, IStrategyMetrics, IRebalanceableVault {
         emit ManagerUpdated(m);
     }
 
-    function setParams(bytes calldata) external override onlyManager {
-        // placeholder for future param updates (e.g., pool keys, slippage, fee policy)
+    function setParams(bytes calldata data) external override onlyManager {
+        // abi.encode(token0, token1, fee, tickSpacing, hook, slippageBps)
+        (
+            address t0,
+            address t1,
+            uint24 fee,
+            int24 ts,
+            address hook,
+            uint16 slippage
+        ) = abi.decode(data, (address, address, uint24, int24, address, uint16));
+
+        poolToken0 = t0;
+        poolToken1 = t1;
+        poolFee = fee;
+        poolTickSpacing = ts;
+        poolHook = hook;
+        slippageBps = slippage;
+        emit ParamsUpdated(t0, t1, fee, ts, hook, slippage);
     }
 
     // ------------------ NAV/PPS Seeding and Updates ------------------

@@ -147,6 +147,51 @@ Outputs:
 - `UniswapStrategyRegistry` deployed and strategy registered (active)
 - Manager set to the `PRIVATE_KEY` address by default
 
+### Vault setParams ABI shape + on-chain example
+
+`UniswapLPVault.setParams(bytes data)` expects the following ABI-encoded tuple:
+
+```text
+abi.encode(
+  address token0,
+  address token1,
+  uint24  fee,
+  int24   tickSpacing,
+  address hook,
+  uint16  slippageBps
+)
+```
+
+Notes:
+- Ensure `token0 < token1` (address ordering) to match Uniswap v4 `PoolKey` currency ordering.
+- Only the manager (or owner) can call `setParams`.
+
+Example using cast to set params on-chain:
+
+```bash
+export RPC_URL=$RPC_URL_UNICHAIN_SEPOLIA
+export VAULT=0x...      # deployed UniswapLPVault
+export TOKEN0=0x...     # e.g., WETH  on Unichain Sepolia: 0x4200000000000000000000000000000000000006
+export TOKEN1=0x...     # e.g., USDC on Unichain Sepolia: 0x31d0220469e10c4e71834a79b1f276d740d3768f
+export FEE=3000
+export TICK_SPACING=60
+export HOOK=0x...       # deployed MultiPolicyHook
+export SLIPPAGE_BPS=50  # 0.50%
+
+cast send "$VAULT" "setParams(bytes)" \
+  $(cast abi-encode "(address,address,uint24,int24,address,uint16)" \
+      $TOKEN0 $TOKEN1 $FEE $TICK_SPACING $HOOK $SLIPPAGE_BPS) \
+  --rpc-url "$RPC_URL" --private-key "$PRIVATE_KEY"
+
+# Verify stored fields
+cast call "$VAULT" "poolToken0()(address)" --rpc-url "$RPC_URL"
+cast call "$VAULT" "poolToken1()(address)" --rpc-url "$RPC_URL"
+cast call "$VAULT" "poolFee()(uint24)" --rpc-url "$RPC_URL"
+cast call "$VAULT" "poolTickSpacing()(int24)" --rpc-url "$RPC_URL"
+cast call "$VAULT" "poolHook()(address)" --rpc-url "$RPC_URL"
+cast call "$VAULT" "slippageBps()(uint16)" --rpc-url "$RPC_URL"
+```
+
 ## Step 5. Emit snapshots for frontend charts
 
 Script: `packages/uniswap_integration/script/SnapshotAfterCheckpoint.s.sol`
