@@ -2,6 +2,7 @@
 pragma solidity ^0.8.30;
 
 import {Script} from "forge-std/Script.sol";
+import {StdCheats} from "forge-std/StdCheats.sol";
 import {IPoolManager} from "@uniswap/v4-core/src/interfaces/IPoolManager.sol";
 import {PoolKey} from "@uniswap/v4-core/src/types/PoolKey.sol";
 import {IHooks} from "@uniswap/v4-core/src/interfaces/IHooks.sol";
@@ -9,7 +10,7 @@ import {Currency} from "@uniswap/v4-core/src/types/Currency.sol";
 
 import {MultiPolicyHook} from "../src/hooks/MultiPolicyHook.sol";
 
-/// @notice Configure range/vol/fees policy params for a given pool key in MultiPolicyHook
+/// @notice Configure range/vol/fees policy params for a given pool key in MultiPolicyHook for verification
 /// ENV:
 /// - PRIVATE_KEY: broadcaster private key (required for broadcast)
 /// - HOOK: address of deployed MultiPolicyHook (required)
@@ -34,7 +35,7 @@ import {MultiPolicyHook} from "../src/hooks/MultiPolicyHook.sol";
 /// Fee params:
 /// - COMPOUND_COOLDOWN: uint32 seconds (default 3600)
 /// - MIN_FEES: uint128 units (default 0)
-contract ConfigureHook is Script {
+contract ConfigureHook is Script, StdCheats {
     function run() external {
         uint256 pk = vm.envOr("PRIVATE_KEY", uint256(0));
         address hookAddr = vm.envAddress("HOOK");
@@ -42,6 +43,16 @@ contract ConfigureHook is Script {
         address token1 = vm.envAddress("TOKEN1");
         require(hookAddr != address(0), "hook=0");
         require(token0 != address(0) && token1 != address(0), "tokens=0");
+
+        // Optionally fund broadcaster and credit USDC on local fork
+        address sender = pk != 0 ? vm.addr(pk) : msg.sender;
+        bool fund = vm.envOr("FUND_BROADCASTER", true);
+        if (fund) vm.deal(sender, 10 ether);
+        address usdc = vm.envOr("USDC", address(0));
+        uint256 usdcAmt = vm.envOr("USDC_DEAL", uint256(0));
+        if (usdc != address(0) && usdcAmt > 0) {
+            deal(usdc, sender, usdcAmt, true);
+        }
 
         uint256 feeTmp = vm.envOr("FEE", uint256(3000));
         uint256 tsTmp = vm.envOr("TICK_SPACING", uint256(60));

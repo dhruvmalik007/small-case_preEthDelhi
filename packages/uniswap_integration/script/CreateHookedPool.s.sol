@@ -2,6 +2,7 @@
 pragma solidity ^0.8.30;
 
 import {Script} from "forge-std/Script.sol";
+import {StdCheats} from "forge-std/StdCheats.sol";
 import {IPoolManager} from "@uniswap/v4-core/src/interfaces/IPoolManager.sol";
 import {PoolKey} from "@uniswap/v4-core/src/types/PoolKey.sol";
 import {IHooks} from "@uniswap/v4-core/src/interfaces/IHooks.sol";
@@ -18,12 +19,21 @@ import {ChainConfig} from "../src/libraries/ChainConfig.sol";
 /// - TICK_SPACING: int24 tick spacing (default 60)
 /// - SQRT_PRICE_X96: uint256 optional initial sqrt price; defaults to Q96 (1:1)
 /// - POOL_MANAGER: override address; defaults from ChainConfig
-contract CreateHookedPool is Script {
+contract CreateHookedPool is Script, StdCheats {
     using CurrencyLibrary for Currency;
 
     function run() external {
         ChainConfig.V4Addresses memory a = ChainConfig.get(block.chainid);
         uint256 pk = vm.envOr("PRIVATE_KEY", uint256(0));
+        // Optionally fund broadcaster and credit USDC on local fork
+        address sender = pk != 0 ? vm.addr(pk) : msg.sender;
+        bool fund = vm.envOr("FUND_BROADCASTER", true);
+        if (fund) vm.deal(sender, 10 ether);
+        address usdc = vm.envOr("USDC", address(0));
+        uint256 usdcAmt = vm.envOr("USDC_DEAL", uint256(0));
+        if (usdc != address(0) && usdcAmt > 0) {
+            deal(usdc, sender, usdcAmt, true);
+        }
         address token0 = vm.envAddress("TOKEN0");
         address token1 = vm.envAddress("TOKEN1");
         address hookAddr = vm.envAddress("HOOK");
