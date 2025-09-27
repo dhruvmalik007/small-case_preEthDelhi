@@ -6,6 +6,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Shield, AlertTriangle, CheckCircle } from "lucide-react";
 import Link from "next/link";
+import { getKYCStatusInfo, debugKYCStatus } from "@/lib/kyc-status";
 
 interface KYCStatusProps {
     showAlert?: boolean;
@@ -15,50 +16,20 @@ interface KYCStatusProps {
 export function KYCStatus({ showAlert = false, className = "" }: KYCStatusProps) {
     const { user, isSignedIn } = useUser();
 
-    // Mock KYC status - in real implementation, this would come from your database
-    const getKYCStatus = () => {
-        if (!isSignedIn || !user) {
-            return { status: "not_signed_in", verified: false };
-        }
-
-        // Check if user has completed KYC based on metadata or database
-        const kycStatus = user.publicMetadata?.kycStatus as string;
-
-        // Debug logging
-        console.log("KYC Status Debug:", {
-            isSignedIn,
-            userId: user?.id,
-            kycStatus,
-            publicMetadata: user.publicMetadata
-        });
-
-        if (kycStatus === "completed" || kycStatus === "VERIFIED") {
-            return { status: "verified", verified: true };
-        } else if (kycStatus === "PENDING") {
-            return { status: "pending", verified: false };
-        } else if (kycStatus === "REJECTED") {
-            return { status: "rejected", verified: false };
-        } else {
-            return { status: "not_verified", verified: false };
-        }
-    };
-
-    const kycInfo = getKYCStatus();
+    // Use unified KYC status management
+    const kycInfo = debugKYCStatus(user, isSignedIn ?? false);
 
     if (!showAlert) {
         return (
             <div className={`flex items-center gap-2 ${className}`}>
-                {kycInfo.verified ? (
-                    <Badge variant="default" className="bg-green-100 text-green-800 border-green-200">
+                <Badge variant={kycInfo.badgeVariant} className={kycInfo.badgeColor}>
+                    {kycInfo.verified ? (
                         <CheckCircle className="h-3 w-3 mr-1" />
-                        KYC Verified
-                    </Badge>
-                ) : (
-                    <Badge variant="outline" className="border-orange-200 text-orange-800">
+                    ) : (
                         <AlertTriangle className="h-3 w-3 mr-1" />
-                        KYC Required
-                    </Badge>
-                )}
+                    )}
+                    {kycInfo.displayText}
+                </Badge>
             </div>
         );
     }
@@ -111,31 +82,6 @@ export function KYCStatus({ showAlert = false, className = "" }: KYCStatusProps)
 export function useKYCStatus() {
     const { user, isSignedIn } = useUser();
 
-    const getKYCStatus = () => {
-        if (!isSignedIn || !user) {
-            return { status: "not_signed_in", verified: false };
-        }
-
-        const kycStatus = user.publicMetadata?.kycStatus as string;
-
-        // Debug logging
-        console.log("useKYCStatus Debug:", {
-            isSignedIn,
-            userId: user?.id,
-            kycStatus,
-            publicMetadata: user.publicMetadata
-        });
-
-        if (kycStatus === "completed" || kycStatus === "VERIFIED") {
-            return { status: "verified", verified: true };
-        } else if (kycStatus === "PENDING") {
-            return { status: "pending", verified: false };
-        } else if (kycStatus === "REJECTED") {
-            return { status: "rejected", verified: false };
-        } else {
-            return { status: "not_verified", verified: false };
-        }
-    };
-
-    return getKYCStatus();
+    // Use unified KYC status management
+    return debugKYCStatus(user, isSignedIn ?? false);
 }

@@ -11,8 +11,8 @@ export default function Page({
   const afterUrl = isPublisher
     ? "/onboarding/publisher"
     : isInvestor
-    ? "/onboarding/investor"
-    : "/user";
+      ? "/investor"
+      : "/user";
 
   return (
     <section className="container flex min-h-[70vh] items-center justify-center py-10">

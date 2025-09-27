@@ -17,7 +17,7 @@ export async function POST() {
     await client.users.updateUser(userId, {
       publicMetadata: {
         role: "investor",
-        kycStatus: "pending",
+        // Don't set KYC status here - let it be undefined until user actually completes KYC
       },
     });
 
