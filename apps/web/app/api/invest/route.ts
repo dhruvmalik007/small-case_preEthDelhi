@@ -1,4 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
+import fs from "node:fs";
+import path from "node:path";
 
 // Minimal JSON-RPC helper for local Anvil node
 async function rpc<T = any>(method: string, params: any[]): Promise<T> {
@@ -105,6 +107,123 @@ export async function POST(req: NextRequest) {
           data: "0x",
         },
       ]);
+    }
+
+    // 3) Bootstrap metrics-only strategy and snapshot index inline (best-effort)
+    //    Deploy UniswapStrategyRegistry + PoolMetricsAdapter, configure, register, snapshot
+    try {
+      // apps/web -> ../../packages/uniswap_integration/out
+      const artifactRoot = path.resolve(process.cwd(), "..", "..", "packages", "uniswap_integration", "out");
+
+      // Helpers
+      const asciiToHex = (s: string) => {
+        const b = Buffer.from(s, "utf8");
+        return "0x" + b.toString("hex");
+      };
+      const bytes32FromString = (s: string) => {
+        const hex = Buffer.from(s, "utf8").toString("hex").slice(0, 64);
+        return "0x" + hex.padEnd(64, "0");
+      };
+      const pad32 = (hexNo0x: string) => hexNo0x.padStart(64, "0");
+      const clean0x = (h: string) => h.replace(/^0x/, "");
+      const encAddress = (addr: string) => pad32(clean0x(addr.toLowerCase()));
+      const encUint = (v: bigint) => pad32(v.toString(16));
+      const encInt = (v: bigint) => {
+        // two's complement encoding for signed ints, assumes small positive values here
+        if (v >= 0) return pad32(v.toString(16));
+        const mod = BigInt(1) << BigInt(256);
+        return pad32((mod + v).toString(16));
+      };
+      const encBytes32 = (b32: string) => pad32(clean0x(b32));
+      const selector = async (sig: string) => {
+        const hash = await rpc<string>("web3_sha3", [asciiToHex(sig)]);
+        return "0x" + clean0x(hash).slice(0, 8);
+      };
+      const waitForReceipt = async (hash: string) => {
+        for (let i = 0; i < 60; i++) {
+          const rec = await rpc<any>("eth_getTransactionReceipt", [hash]);
+          if (rec) return rec;
+          await new Promise(r => setTimeout(r, 200));
+        }
+        throw new Error("receipt timeout");
+      };
+      const loadBytecode = (dir: string, file: string) => {
+        const p = path.join(artifactRoot, dir, file);
+        if (!fs.existsSync(p)) return undefined;
+        const j = JSON.parse(fs.readFileSync(p, "utf8"));
+        const bc = j.bytecode?.object || j.bytecode || j.data?.bytecode?.object;
+        if (!bc || typeof bc !== "string") return undefined;
+        return bc.startsWith("0x") ? bc : ("0x" + bc);
+      };
+      const send = async (to: string | null, data: string, value?: string) => {
+        return rpc<string>("eth_sendTransaction", [{ from: walletAddress, to: to ?? undefined, data, value }]);
+      };
+
+      // Load artifacts
+      const regBytecode = loadBytecode("UniswapStrategyRegistry.sol", "UniswapStrategyRegistry.json");
+      const adapBytecode = loadBytecode("PoolMetricsAdapter.sol", "PoolMetricsAdapter.json");
+      if (!regBytecode || !adapBytecode) throw new Error("artifacts not found");
+
+      // Deploy Registry(owner = wallet)
+      const regCtor = encAddress(walletAddress);
+      const regDeployData = regBytecode + clean0x(regCtor);
+      const regTx = await send(null, regDeployData);
+      const regRc = await waitForReceipt(regTx);
+      const registryAddr: string = regRc.contractAddress;
+
+      // Deploy PoolMetricsAdapter(strategyId, owner)
+      const strategyIdB32 = bytes32FromString(strategySlug || "DEMO-STRATEGY");
+      const adapCtor = encBytes32(strategyIdB32) + encAddress(walletAddress);
+      const adapDeployData = adapBytecode + clean0x(adapCtor);
+      const adapTx = await send(null, adapDeployData);
+      const adapRc = await waitForReceipt(adapTx);
+      const adapterAddr: string = adapRc.contractAddress;
+
+      // setPoolKey(address,address,uint24,int24,address)
+      const token0 = process.env.WETH_ADDRESS || "0x4200000000000000000000000000000000000006";
+      const token1 = process.env.USDC_ADDRESS || "0x078d782b760474a361DDa0AF3839290B0eF57Ad6";
+      const fee = BigInt(500); // 0.05%
+      const tickSpacing = BigInt(10);
+      const hook = "0x0000000000000000000000000000000000000000";
+      const selSetPoolKey = await selector("setPoolKey(address,address,uint24,int24,address)");
+      const dataSetPoolKey = selSetPoolKey +
+        encAddress(token0) +
+        encAddress(token1) +
+        encUint(fee).slice(0, 64) +
+        encInt(tickSpacing).slice(0, 64) +
+        encAddress(hook);
+      const spkTx = await send(adapterAddr, dataSetPoolKey);
+      await waitForReceipt(spkTx);
+
+      // seedBaseline(uint256)
+      const selSeed = await selector("seedBaseline(uint256)");
+      const dataSeed = selSeed + BigInt(100000000000000000000); // 100e18
+      const seedTx = await send(adapterAddr, dataSeed);
+      await waitForReceipt(seedTx);
+
+      // registerMetricsStrategy(bytes32,address,address)
+      const selRegMet = await selector("registerMetricsStrategy(bytes32,address,address)");
+      const dataRegMet = selRegMet + encBytes32(strategyIdB32) + encAddress(adapterAddr) + encAddress(hook);
+      const rTx = await send(registryAddr, dataRegMet);
+      await waitForReceipt(rTx);
+
+      // registerIndex(bytes32,bytes32[])
+      const selRegIdx = await selector("registerIndex(bytes32,bytes32[])");
+      const indexIdB32 = bytes32FromString("DEMO-INDEX");
+      // head: indexId | offset(0x40)
+      const head = encBytes32(indexIdB32) + pad32("40");
+      const tail = BigInt(1) + encBytes32(strategyIdB32);
+      const dataRegIdx = selRegIdx + head + tail;
+      const iTx = await send(registryAddr, dataRegIdx);
+      await waitForReceipt(iTx);
+
+      // snapshotIndex(bytes32)
+      const selSnap = await selector("snapshotIndex(bytes32)");
+      const dataSnap = selSnap + encBytes32(indexIdB32);
+      const sTx = await send(registryAddr, dataSnap);
+      await waitForReceipt(sTx);
+    } catch (bootstrapErr) {
+      console.warn("bootstrap metrics-only failed:", bootstrapErr);
     }
 
     // Optionally: de-impersonate (no-op if unsupported)
