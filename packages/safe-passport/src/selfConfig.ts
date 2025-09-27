@@ -51,7 +51,7 @@ export function buildFrontendConfig(params: {
     userIdType: 'hex',
     version,
     appName: 'Safe Passport',
-    scope: 'safe-passport',
+    scope: 'defi-smallcases',
     userId,
     disclosures,
     userDefinedData,

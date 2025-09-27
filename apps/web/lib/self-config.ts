@@ -5,23 +5,23 @@ export const SELF_CONFIG = {
     verificationChainId: parseInt(process.env.NEXT_PUBLIC_SAFE_PASSPORT_CHAIN_ID || "44787"), // Celo Alfajores Testnet
     
     // App Configuration
-    appName: "DeFi Smallcases",
+    appName: process.env.NEXT_PUBLIC_APP_NAME || "DeFi Smallcases",
     appIcon: "/logo.png", // Update with your app icon
     appDescription: "Decentralized investment strategies for DeFi",
     
     // Verification Configuration - Self Tools compatible
-    verificationScope: "defi-smallcases", // Your application scope
-    scopeSeed: "defi-smallcases-scope-seed", // For scope generation
+    verificationScope: process.env.NEXT_PUBLIC_APP_SCOPE || "defi-smallcases", // Your application scope
+    scopeSeed: process.env.NEXT_PUBLIC_APP_SCOPE || "defi-smallcases", // For scope generation
     
     // Self Hub Configuration - Celo Alfajores Testnet
-    selfHubAddress: "0x16ECBA51e18a4a7e61fdC417f0d47AFEeDfbed74", // Celo Alfajores testnet hub
+    selfHubAddress: process.env.NEXT_PUBLIC_SELF_HUB_ADDRESS || "0x16ECBA51e18a4a7e61fdC417f0d47AFEeDfbed74", // Celo Alfajores testnet hub
     endpointType: process.env.NEXT_PUBLIC_SELF_ENDPOINT_TYPE || "staging_celo",
     
     // Scope Configuration - Generated using Self Tools method
-    scope: "defi-smallcases", // Your application identifier
+    scope: process.env.NEXT_PUBLIC_APP_SCOPE || "defi-smallcases", // Your application identifier
     
     // RPC Configuration - Celo Alfajores Testnet
-    rpcUrl: "https://alfajores-forno.celo-testnet.org",
+    rpcUrl: process.env.NEXT_PUBLIC_CELO_RPC_URL || "https://alfajores-forno.celo-testnet.org",
     
     // Self App Configuration - Use staging playground for testing
     selfAppUrl: "https://playground.staging.self.xyz",
