@@ -9,7 +9,6 @@ export function Footer() {
         <div>
           <p className="mb-3 text-xs font-semibold tracking-wider text-foreground/80">PRODUCT</p>
           <ul className="space-y-2 text-muted-foreground">
-            <li><Link className="hover:text-foreground" href="#pricing">Pricing</Link></li>
             <li><Link className="hover:text-foreground" href="/strategies">Features</Link></li>
             <li><Link className="hover:text-foreground" href="/support/faqs">FAQ</Link></li>
             <li><Link className="hover:text-foreground" href="/support/chat">Support</Link></li>
