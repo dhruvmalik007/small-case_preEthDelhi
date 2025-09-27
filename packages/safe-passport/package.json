@@ -5,40 +5,23 @@
   "sideEffects": false,
   "license": "MIT",
   "description": "Safe Passport: ZK-based identity verification (age, OFAC, KYC jurisdiction, RIA) via Self Protocol V2 with contracts and TS SDK.",
-  "exports": {
-    ".": {
-      "types": "./src/index.ts",
-      "import": "./dist/index.mjs",
-      "require": "./dist/index.js"
-    },
-    "./constants": {
-      "types": "./src/constants.ts",
-      "import": "./dist/constants.mjs",
-      "require": "./dist/constants.js"
-    },
-    "./encoding": {
-      "types": "./src/encoding.ts",
-      "import": "./dist/encoding.mjs",
-      "require": "./dist/encoding.js"
-    },
-    "./selfConfig": {
-      "types": "./src/selfConfig.ts",
-      "import": "./dist/selfConfig.mjs",
-      "require": "./dist/selfConfig.js"
-    }
-  },
   "scripts": {
     "build": "tsup",
     "dev": "tsup --watch",
+    "prepare": "pnpm run build",
     "lint": "eslint . --max-warnings 0",
     "clean": "rm -rf .turbo node_modules dist",
     "forge:build": "forge build -C contracts",
+    "deploy": "forge script contracts/script/Deploy.s.sol:DeploySafePassport --rpc-url https://celo.drpc.org --broadcast",
     "forge:test": "forge test -C contracts -vvv",
+    "forge:test:fork": "forge test -C contracts -vvv --fork-url $FORK_URL",
+    "forge:verify": "forge verify-contract --rpc-url https://celo.drpc.org  0x66fd19Dcd8a8A144415b5C2274B6dD737f639B7B  ",
     "e2e": "tsx e2e/e2e.ts"
   },
   "devDependencies": {
     "@repo/eslint-config": "workspace:*",
     "@repo/typescript-config": "workspace:*",
+    "@types/node": "^20.11.30",
     "eslint": "^8.57.0",
     "tsup": "^8.0.2",
     "tsx": "^4.19.1",
@@ -49,6 +32,15 @@
     "@selfxyz/qrcode": "latest",
     "viem": "^2.37.8",
     "zod": "^3.23.8"
+  },
+  "tsup": {
+    "entry": ["src/index.ts"],
+    "format": ["esm", "cjs"],
+    "dts": true,
+    "sourcemap": true,
+    "clean": true,
+    "target": "es2020",
+    "outDir": "dist"
   },
   "publishConfig": {
     "access": "public"

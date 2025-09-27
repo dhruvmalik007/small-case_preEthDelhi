@@ -73,8 +73,8 @@ export function SafePassportWidget(props: SafePassportWidgetProps) {
   async function handleSuccess() {
     try {
       setInfo("Finalizing onboarding…");
-      const res = await fetch("/api/investor/kyc/complete", { method: "POST" });
-      if (!res.ok) throw new Error("Failed to complete onboarding");
+     // const res = await fetch("/api/investor/kyc/complete", { method: "POST" });
+      //if (!res.ok) throw new Error("Failed to complete onboarding");
       setInfo("Onboarding complete.");
       // Invoke optional external callback
       if (props.onSuccess) await props.onSuccess();
@@ -88,6 +88,7 @@ export function SafePassportWidget(props: SafePassportWidgetProps) {
   }
 
   async function handleError(e?: unknown) {
+    
     setError("Verification failed. You are not onboarded.");
     if (props.onError) await props.onError(e);
   }

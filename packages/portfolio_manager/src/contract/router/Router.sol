@@ -3,6 +3,8 @@ pragma solidity ^0.8.29;
 
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 import {IPortfolioAggregator} from "../interfaces/IPortfolioAggregator.sol";
+import {IDefiSaverAdapter} from "../interfaces/IDefiSaverAdapter.sol";
+import {IDefiSaverStrategyExecutor} from "../interfaces/IDefiSaverExecutor.sol";
 
 /// @title Router (MVP)
 /// @notice Lightweight manager that orchestrates allocations between child ERC-4626 vaults via the Aggregator
@@ -25,6 +27,9 @@ contract Router is Ownable {
     address public vault4; // Hyperliquidity
     address public vaultR; // Reserve
 
+    // optional DefiSaver adapter for recipe forwarding
+    address public dfsAdapter;
+
     Guardrails public limits;
     uint256 public lastRebalanceTs;
 
@@ -32,6 +37,7 @@ contract Router is Ownable {
     event VaultsSet(address v1, address v2, address v3, address v4, address vR);
     event GuardrailsSet(Guardrails limits);
     event Rebalanced(address indexed fromVault, address indexed toVault, uint256 assets);
+    event DFSAdapterSet(address indexed adapter);
 
     constructor(address owner_) Ownable(owner_) {}
 
@@ -50,8 +56,14 @@ contract Router is Ownable {
         emit GuardrailsSet(g);
     }
 
+    /// @notice Set DeFi Saver adapter used for forwarding strategies
+    function setDFSAdapter(address adapter) external onlyOwner {
+        dfsAdapter = adapter;
+        emit DFSAdapterSet(adapter);
+    }
+
     /// @notice Rebalance a portion: withdraw from fromVault, allocate to toVault (same underlying)
-    function rebalancePortion(address fromVault, address toVault, uint256 assets) external onlyOwner {
+    function rebalancePortion(address fromVault, address toVault, uint256 assets) public onlyOwner {
         require(block.timestamp >= lastRebalanceTs + limits.minIntervalSec, "interval");
         require(assets <= limits.txPositionCap, "cap");
         aggregator.redeemFromChild(fromVault, assets);
@@ -68,5 +80,24 @@ contract Router is Ownable {
     /// @notice Helper matching your scenario: move from Vault1 (Pendle) into Vault4 (Hyperliquidity)
     function topupVault4FromVault1(uint256 assets) external onlyOwner {
         rebalancePortion(vault1, vault4, assets);
+    }
+
+    /// @notice Forward an encoded DeFi Saver strategy via the configured adapter
+    /// @dev Requires that the adapter and DFS infra are properly configured and authorized off-chain
+    function forwardDFSStrategy(
+        uint256 subId,
+        uint256 strategyIndex,
+        bytes[] calldata triggerCallData,
+        bytes[] calldata actionsCallData,
+        IDefiSaverStrategyExecutor.StrategySub calldata sub
+    ) external onlyOwner {
+        require(dfsAdapter != address(0), "DFS adapter not set");
+        IDefiSaverAdapter(dfsAdapter).executeDefiSaverStrategy(
+            subId,
+            strategyIndex,
+            triggerCallData,
+            actionsCallData,
+            sub
+        );
     }
 }

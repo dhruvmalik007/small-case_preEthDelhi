@@ -57,11 +57,33 @@ contract SafePassportTest {
     function testClientVerify() public {
         setUp();
         bool[3] memory ofac = [bool(true), false, false];
-        ISelfVerificationRoot.GenericDiscloseOutputV2 memory outp = _mkOutput("DEU", 18, ofac);
+        ISelfVerificationRoot.GenericDiscloseOutputV2 memory outp = _mkOutput("IND", 18, ofac);
         bytes memory userData = _encodeUserData(1, bytes32(0));
         hub.submitVerification(address(passport), outp, userData);
         require(passport.clientVerified(user), "client not verified");
-        require(keccak256(bytes(passport.lastNationality(user))) == keccak256(bytes("DEU")), "nat mismatch");
+        require(keccak256(bytes(passport.lastNationality(user))) == keccak256(bytes("IND")), "nat mismatch");
+    }
+
+    function testClientVerifyWrongNationalityReverts() public {
+        setUp();
+        bool[3] memory ofac = [bool(true), false, false];
+        ISelfVerificationRoot.GenericDiscloseOutputV2 memory outp = _mkOutput("DEU", 18, ofac);
+        bytes memory userData = _encodeUserData(1, bytes32(0));
+        // Expect revert due to nationality rule (required IND)
+        try hub.submitVerification(address(passport), outp, userData) {
+            revert("expected revert");
+        } catch {}
+    }
+
+    function testClientVerifyUnderageReverts() public {
+        setUp();
+        bool[3] memory ofac = [bool(true), false, false];
+        ISelfVerificationRoot.GenericDiscloseOutputV2 memory outp = _mkOutput("IND", 17, ofac);
+        bytes memory userData = _encodeUserData(1, bytes32(0));
+        // Expect revert due to age rule (>=18)
+        try hub.submitVerification(address(passport), outp, userData) {
+            revert("expected revert");
+        } catch {}
     }
 
     function testPmVerify() public {
