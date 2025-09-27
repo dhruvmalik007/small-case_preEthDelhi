@@ -74,6 +74,14 @@ export function KYCStatus({ showAlert = false, className = "" }: KYCStatusProps)
                         </Button>
                     </div>
                 )}
+                {kycInfo.status === "unlinked" && (
+                    <div className="space-y-2">
+                        <p>Your KYC verification has been unlinked from your account.</p>
+                        <Button asChild size="sm">
+                            <Link href="/investor/kyc">Complete KYC Again</Link>
+                        </Button>
+                    </div>
+                )}
             </AlertDescription>
         </Alert>
     );

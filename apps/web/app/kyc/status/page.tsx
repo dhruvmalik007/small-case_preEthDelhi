@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Shield, CheckCircle, AlertTriangle, Clock, FileText } from "lucide-react";
+import { UnlinkKYC } from "@/components/kyc/unlink-kyc";
 
 export default async function KYCStatusPage() {
     const user = await currentUser();
@@ -82,6 +83,9 @@ export default async function KYCStatusPage() {
                                     <p className="text-sm text-muted-foreground">
                                         Your identity has been successfully verified. You can now invest in all available strategies.
                                     </p>
+                                </div>
+                                <div className="pt-4">
+                                    <UnlinkKYC />
                                 </div>
                             </div>
                         </CardContent>

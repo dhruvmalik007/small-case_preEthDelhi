@@ -1,7 +1,7 @@
 // Unified KYC status management
 // This centralizes all KYC status logic to prevent inconsistencies
 
-export type KYCStatus = "not_signed_in" | "not_verified" | "pending" | "completed" | "verified" | "rejected";
+export type KYCStatus = "not_signed_in" | "not_verified" | "pending" | "completed" | "verified" | "rejected" | "unlinked";
 
 export interface KYCStatusInfo {
     status: KYCStatus;
@@ -31,6 +31,17 @@ export function getKYCStatusInfo(kycStatus: string | undefined, isSignedIn: bool
             displayText: "KYC Required",
             badgeVariant: "outline",
             badgeColor: "border-orange-200 text-orange-800"
+        };
+    }
+
+    // Handle unlinked status
+    if (kycStatus === "unlinked") {
+        return {
+            status: "unlinked",
+            verified: false,
+            displayText: "KYC Unlinked",
+            badgeVariant: "outline",
+            badgeColor: "border-gray-200 text-gray-600"
         };
     }
 
