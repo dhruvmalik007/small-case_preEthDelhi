@@ -7,7 +7,7 @@ export default async function InvestorDashboardPage() {
   if (!user) redirect("/sign-in/investor");
 
   const kycStatus = (user.publicMetadata as any)?.kycStatus as string | undefined;
-  if (kycStatus !== "completed") redirect("/investor/kyc");
+  const isKycCompleted = kycStatus === "completed";
 
   return (
     <div className="space-y-6">
@@ -15,6 +15,16 @@ export default async function InvestorDashboardPage() {
         <h1 className="text-2xl font-semibold tracking-tight">Dashboard</h1>
         <p className="mt-1 text-sm text-muted-foreground">Welcome {user.firstName ?? user.username ?? "Investor"}.</p>
       </div>
+
+      {!isKycCompleted && (
+        <div className="rounded-md border p-4">
+          <div className="text-sm">
+            <span className="font-medium">KYC pending.</span> To unlock investing, please complete verification.
+            {" "}
+            <a href="/investor/kyc" className="text-blue-600 underline">Go to KYC</a>
+          </div>
+        </div>
+      )}
 
       <div className="grid gap-6 md:grid-cols-3">
         <Card>

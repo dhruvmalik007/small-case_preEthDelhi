@@ -1,34 +1,63 @@
 "use client";
 
 import * as React from "react";
-import Link from "next/link";
-import { SignedIn, SignedOut, SignInButton, SignOutButton, useUser } from "@clerk/nextjs";
+import { SignedIn, SignedOut, SignInButton, SignOutButton, useUser, useSignIn } from "@clerk/nextjs";
 import {
   DropdownMenu,
   DropdownMenuContent,
-  DropdownMenuItem,
   DropdownMenuLabel,
-  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Button } from "@/components/ui/button";
-import {
-  ChevronDown,
-  User,
-  FileText,
-  HelpCircle,
-  MessageSquare,
-  ClipboardList,
-  CreditCard,
-} from "lucide-react";
+import { ChevronDown, User } from "lucide-react";
+import Link from "next/link";
 
 export function AccountDropdown() {
   const { user } = useUser();
-  const displayName = user?.fullName || user?.primaryEmailAddress?.emailAddress || "Not logged in";
-  const role = (user?.publicMetadata as { role?: string } | undefined)?.role as
-    | "investor"
-    | "publisher"
-    | undefined;
+  const displayName = user?.fullName || user?.username || user?.primaryEmailAddress?.emailAddress || "Not logged in";
+
+  const [address, setAddress] = React.useState<`0x${string}` | null>(null);
+  const [chainId, setChainId] = React.useState<string | null>(null);
+  const [hasProvider, setHasProvider] = React.useState(false);
+  const { signIn, isLoaded: signInLoaded } = useSignIn();
+
+  React.useEffect(() => {
+    const eth = (typeof window !== "undefined" ? (window as any).ethereum : undefined);
+    if (!eth) { setHasProvider(false); return; }
+    setHasProvider(true);
+
+    const update = async () => {
+      try {
+        const [accts, cid] = await Promise.all([
+          eth.request({ method: "eth_accounts" }),
+          eth.request({ method: "eth_chainId" }).catch(() => null),
+        ]);
+        setAddress(accts?.[0] ?? null);
+        if (cid) setChainId(cid);
+      } catch {}
+    };
+    update();
+
+    const onAccountsChanged = (accts: string[]) => setAddress(accts?.[0] as `0x${string}` ?? null);
+    const onChainChanged = (cid: string) => setChainId(cid);
+    eth.on?.("accountsChanged", onAccountsChanged);
+    eth.on?.("chainChanged", onChainChanged);
+    return () => {
+      eth.removeListener?.("accountsChanged", onAccountsChanged);
+      eth.removeListener?.("chainChanged", onChainChanged);
+    };
+  }, []);
+
+  const chainLabel = React.useMemo(() => {
+    if (!chainId) return "Unknown";
+    try {
+      const id = parseInt(chainId, 16);
+      if (id === 42220) return "Celo";
+      if (id === 44787) return "Celo Alfajores";
+      if (id === 11155111) return "Sepolia";
+      return `Chain #${id}`;
+    } catch { return "Unknown"; }
+  }, [chainId]);
 
   return (
     <DropdownMenu>
@@ -40,121 +69,97 @@ export function AccountDropdown() {
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent className="w-80 p-0">
-        <div className="px-3 py-2">
-          <DropdownMenuLabel className="px-0 py-0 text-[11px] uppercase tracking-wide">Accounts</DropdownMenuLabel>
-          <div className="mt-2 space-y-2">
-            <div className="flex items-center justify-between rounded-md border p-3">
-              <div className="space-y-1">
-                <div className="text-sm font-medium">Investor Account</div>
-                {role === "investor" ? (
-                  <Link href="/investor" className="text-xs text-blue-600 hover:underline">Go to dashboard</Link>
-                ) : (
-                  <div className="text-xs text-muted-foreground">
-                    <Link href="/sign-in/investor" className="text-blue-600 hover:underline">Connect Investor Account</Link>
-                    <span className="px-1">·</span>
-                    <Link href="/sign-up/investor" className="hover:underline">Sign up</Link>
-                  </div>
-                )}
+        <SignedOut>
+          <div className="px-3 py-2">
+            <DropdownMenuLabel className="px-0 py-0 text-[11px] uppercase tracking-wide">Choose Account</DropdownMenuLabel>
+            <div className="mt-2 space-y-2">
+              <div className="flex items-center justify-between rounded-md border p-3">
+                <div className="space-y-1">
+                  <div className="text-sm font-medium">Investor</div>
+                  <div className="text-xs text-muted-foreground">Sign in or create an investor account</div>
+                </div>
+                <div className="flex gap-2">
+                  <SignInButton mode="modal" signUpForceRedirectUrl="/investor">
+                    <button className="rounded-md border px-2 py-1 text-xs">Sign in</button>
+                  </SignInButton>
+                  <SignInButton mode="modal" forceRedirectUrl="/investor">
+                    <button className="rounded-md border px-2 py-1 text-xs">Sign up</button>
+                  </SignInButton>
+                </div>
               </div>
-              <div className="h-8 w-8 rounded-full bg-muted" />
-            </div>
-            <div className="flex items-center justify-between rounded-md border p-3">
-              <div className="space-y-1">
-                <div className="text-sm font-medium">Publisher Account</div>
-                {role === "publisher" ? (
-                  <Link href="/publisher/dashboard" className="text-xs text-blue-600 hover:underline">Go to dashboard</Link>
-                ) : (
-                  <div className="text-xs text-muted-foreground">
-                    <Link href="/sign-in/publisher" className="text-blue-600 hover:underline">Setup publisher</Link>
-                    <span className="px-1">·</span>
-                    <Link href="/sign-up/publisher" className="hover:underline">Sign up</Link>
-                  </div>
-                )}
+              <div className="flex items-center justify-between rounded-md border p-3">
+                <div className="space-y-1">
+                  <div className="text-sm font-medium">Portfolio Manager</div>
+                  <div className="text-xs text-muted-foreground">Sign in or create a publisher account</div>
+                </div>
+                <div className="flex gap-2">
+                  <SignInButton mode="modal" signUpForceRedirectUrl="/publisher/onboarding">
+                    <button className="rounded-md border px-2 py-1 text-xs">Sign in</button>
+                  </SignInButton>
+                  <SignInButton mode="modal" forceRedirectUrl="/publisher/onboarding">
+                    <button className="rounded-md border px-2 py-1 text-xs">Sign up</button>
+                  </SignInButton>
+                </div>
               </div>
-              <div className="h-8 w-8 rounded-full bg-muted" />
             </div>
           </div>
-        </div>
+        </SignedOut>
 
-        <DropdownMenuSeparator />
-
-        <div className="px-3 py-2">
-          <DropdownMenuLabel className="px-0 py-0 text-[11px] uppercase tracking-wide">Personal Info</DropdownMenuLabel>
-          <div className="mt-2 flex items-center justify-between rounded-md border p-3 text-sm">
-            <span className="text-muted-foreground">{displayName}</span>
-            <SignedOut>
-              <SignInButton mode="modal">
-                <button className="text-blue-600 hover:underline">Log in</button>
-              </SignInButton>
-            </SignedOut>
-            <SignedIn>
-              <Link href="/user" className="text-blue-600 hover:underline">Edit</Link>
-            </SignedIn>
+        <SignedIn>
+          <div className="px-3 py-2">
+            <DropdownMenuLabel className="px-0 py-0 text-[11px] uppercase tracking-wide">User</DropdownMenuLabel>
+            <div className="mt-2 space-y-2 rounded-md border p-3 text-sm">
+              <div className="flex items-center justify-between">
+                <span className="text-muted-foreground">Username</span>
+                <span className="font-medium">{displayName}</span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-muted-foreground">Network</span>
+                <span className="font-medium">{hasProvider ? chainLabel : "No wallet"}</span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-muted-foreground">Address</span>
+                <span className="font-mono text-xs">{address ? `${address.slice(0, 6)}…${address.slice(-4)}` : "—"}</span>
+              </div>
+              <button
+                disabled={!hasProvider || !signInLoaded}
+                onClick={async () => {
+                  if (!hasProvider || !signIn) return;
+                  try {
+                    const eth = (window as any).ethereum;
+                    const [addr] = await eth.request({ method: 'eth_requestAccounts' });
+                    const si = await signIn.create({ identifier: addr, strategy: 'web3_metamask_signature' as any });
+                    const { nonce } = await (si as any).prepareVerification();
+                    const signature = await eth.request({ method: 'personal_sign', params: [nonce, addr] });
+                    await (si as any).attemptVerification({ signature });
+                    setAddress(addr);
+                  } catch (e) {
+                    console.error(e);
+                  }
+                }}
+                className="inline-flex h-9 items-center justify-center rounded-md border bg-primary px-3 text-xs font-medium text-primary-foreground hover:opacity-90"
+              >
+                {address ? 'Re-connect Wallet' : 'Connect Wallet'}
+              </button>
+              <div className="flex gap-2 pt-2">
+                <Link href="/investor" className="inline-flex h-8 items-center justify-center rounded-md border px-2 text-xs hover:bg-accent">
+                  Investor Dashboard
+                </Link>
+                <Link href="/publisher/dashboard" className="inline-flex h-8 items-center justify-center rounded-md border px-2 text-xs hover:bg-accent">
+                  Publisher Dashboard
+                </Link>
+              </div>
+            </div>
           </div>
-        </div>
 
-        <DropdownMenuSeparator />
-
-        <div className="px-3 py-2">
-          <DropdownMenuLabel className="px-0 py-0 text-[11px] uppercase tracking-wide">Activity</DropdownMenuLabel>
-          <div className="mt-2 space-y-1">
-            <DropdownMenuItem asChild>
-              <Link href="/account/orders" className="flex w-full items-center gap-2 rounded-md px-2 py-2 text-sm hover:bg-accent">
-                <ClipboardList className="h-4 w-4" /> Orders
-              </Link>
-            </DropdownMenuItem>
-            <DropdownMenuItem asChild>
-              <Link href="/account/subscriptions" className="flex w-full items-center gap-2 rounded-md px-2 py-2 text-sm hover:bg-accent">
-                <CreditCard className="h-4 w-4" /> Subscriptions
-              </Link>
-            </DropdownMenuItem>
+          <div className="px-3 pb-3">
+            <SignOutButton>
+              <button className="flex w-full items-center gap-2 rounded-md px-2 py-2 text-left text-sm hover:bg-accent">
+                <User className="h-4 w-4" /> Log Out
+              </button>
+            </SignOutButton>
           </div>
-        </div>
-
-        <DropdownMenuSeparator />
-
-        <div className="px-3 py-2">
-          <DropdownMenuLabel className="px-0 py-0 text-[11px] uppercase tracking-wide">Resources</DropdownMenuLabel>
-          <div className="mt-2 space-y-1">
-            <DropdownMenuItem asChild>
-              <Link href="/docs" className="flex w-full items-center gap-2 rounded-md px-2 py-2 text-sm hover:bg-accent">
-                <FileText className="h-4 w-4" /> Docs
-              </Link>
-            </DropdownMenuItem>
-            <DropdownMenuItem asChild>
-              <Link href="/support/faqs" className="flex w-full items-center gap-2 rounded-md px-2 py-2 text-sm hover:bg-accent">
-                <HelpCircle className="h-4 w-4" /> FAQs
-              </Link>
-            </DropdownMenuItem>
-            <DropdownMenuItem asChild>
-              <Link href="/support/chat" className="flex w-full items-center gap-2 rounded-md px-2 py-2 text-sm hover:bg-accent">
-                <MessageSquare className="h-4 w-4" /> Chat with us
-              </Link>
-            </DropdownMenuItem>
-          </div>
-        </div>
-
-        <DropdownMenuSeparator />
-
-        <div className="px-3 py-2">
-          <div className="space-y-1">
-            <SignedOut>
-              <SignInButton mode="modal">
-                <button className="flex w-full items-center gap-2 rounded-md px-2 py-2 text-left text-sm hover:bg-accent">
-                  {/* Using generic icon from lucide-react User */}
-                  <User className="h-4 w-4" /> Log In
-                </button>
-              </SignInButton>
-            </SignedOut>
-            <SignedIn>
-              <SignOutButton>
-                <button className="flex w-full items-center gap-2 rounded-md px-2 py-2 text-left text-sm hover:bg-accent">
-                  <User className="h-4 w-4" /> Log Out
-                </button>
-              </SignOutButton>
-            </SignedIn>
-          </div>
-        </div>
+        </SignedIn>
       </DropdownMenuContent>
     </DropdownMenu>
   );

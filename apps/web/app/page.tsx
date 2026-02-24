@@ -4,7 +4,6 @@ import { strategies } from "@/data/strategies";
 import { PricingSection } from "@/components/sections/pricing";
 
 export default function HomePage() {
-  const featured = strategies.slice(0, 8);
   return (
     <div>
       <Hero />
